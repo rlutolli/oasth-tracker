@@ -3,13 +3,14 @@ package com.oasth.widget.data
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Handler
+import android.os.Looper
 import android.webkit.CookieManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 /**
  * Manages OASTH session via WebView for initial auth, then caches credentials.
@@ -26,12 +27,14 @@ class SessionManager(private val context: Context) {
         private const val STATIC_TOKEN = "e2287129f7a2bbae422f3673c4944d703b84a1cf71e189f869de7da527d01137"
         
         private const val OASTH_URL = "https://telematics.oasth.gr/en/"
-        private const val SESSION_TIMEOUT_MS = 15000L
+        private const val SESSION_TIMEOUT_MS = 30000L // Increased to 30 seconds
     }
     
     private val prefs: SharedPreferences by lazy {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
+    
+    private val mainHandler = Handler(Looper.getMainLooper())
     
     /**
      * Get valid session, refreshing if needed
@@ -42,7 +45,7 @@ class SessionManager(private val context: Context) {
             return cached
         }
         
-        return refreshSession()
+        return refreshSession() ?: throw Exception("Failed to get session")
     }
     
     /**
@@ -68,46 +71,65 @@ class SessionManager(private val context: Context) {
     }
     
     /**
-     * Refresh session using WebView
+     * Refresh session using WebView on main thread
      */
     @SuppressLint("SetJavaScriptEnabled")
-    suspend fun refreshSession(): SessionData = withTimeout(SESSION_TIMEOUT_MS) {
+    suspend fun refreshSession(): SessionData? = withTimeoutOrNull(SESSION_TIMEOUT_MS) {
         suspendCancellableCoroutine { continuation ->
-            val webView = WebView(context)
-            
-            webView.settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                userAgentString = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile"
-            }
-            
-            webView.webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
+            mainHandler.post {
+                try {
+                    val webView = WebView(context)
                     
-                    // Wait a bit for JavaScript to execute
-                    view?.postDelayed({
-                        extractCredentials(view) { session ->
+                    webView.settings.apply {
+                        javaScriptEnabled = true
+                        domStorageEnabled = true
+                        userAgentString = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile"
+                    }
+                    
+                    webView.webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            super.onPageFinished(view, url)
+                            
+                            // Wait for JavaScript to execute
+                            mainHandler.postDelayed({
+                                extractCredentials(view ?: webView) { session ->
+                                    webView.destroy()
+                                    if (session != null) {
+                                        saveSession(session)
+                                    }
+                                    if (continuation.isActive) {
+                                        continuation.resume(session)
+                                    }
+                                }
+                            }, 3000) // Wait 3 seconds for JS to set cookies
+                        }
+                        
+                        override fun onReceivedError(
+                            view: WebView?,
+                            errorCode: Int,
+                            description: String?,
+                            failingUrl: String?
+                        ) {
+                            super.onReceivedError(view, errorCode, description, failingUrl)
                             webView.destroy()
-                            if (session != null) {
-                                saveSession(session)
-                                continuation.resume(session)
-                            } else {
-                                continuation.resumeWithException(
-                                    Exception("Failed to extract session credentials")
-                                )
+                            if (continuation.isActive) {
+                                continuation.resume(null)
                             }
                         }
-                    }, 2000)
+                    }
+                    
+                    // Clear existing cookies and load page
+                    CookieManager.getInstance().removeAllCookies(null)
+                    webView.loadUrl(OASTH_URL)
+                    
+                    continuation.invokeOnCancellation {
+                        mainHandler.post { webView.destroy() }
+                    }
+                } catch (e: Exception) {
+                    if (continuation.isActive) {
+                        continuation.resume(null)
+                    }
                 }
-            }
-            
-            // Clear existing cookies and load page
-            CookieManager.getInstance().removeAllCookies(null)
-            webView.loadUrl(OASTH_URL)
-            
-            continuation.invokeOnCancellation {
-                webView.destroy()
             }
         }
     }
@@ -131,7 +153,16 @@ class SessionManager(private val context: Context) {
                     createdAt = System.currentTimeMillis()
                 ))
             } else {
-                callback(null)
+                // Fallback: use static token if we got cookies at least
+                if (phpSessionId != null) {
+                    callback(SessionData(
+                        phpSessionId = phpSessionId,
+                        token = STATIC_TOKEN,
+                        createdAt = System.currentTimeMillis()
+                    ))
+                } else {
+                    callback(null)
+                }
             }
         }
     }

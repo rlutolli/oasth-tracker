@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.oasth.widget.R
-import com.oasth.widget.data.OasthApi
 import com.oasth.widget.data.SessionManager
 import com.oasth.widget.data.WidgetConfigRepository
 import kotlinx.coroutines.CoroutineScope
@@ -18,6 +17,7 @@ class MainActivity : AppCompatActivity() {
     
     private lateinit var statusText: TextView
     private lateinit var widgetsText: TextView
+    private lateinit var configRepo: WidgetConfigRepository
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,12 +25,20 @@ class MainActivity : AppCompatActivity() {
         
         statusText = findViewById(R.id.status_text)
         widgetsText = findViewById(R.id.widgets_text)
-        
+        configRepo = WidgetConfigRepository(this)
+    }
+    
+    override fun onResume() {
+        super.onResume()
         loadStatus()
     }
     
     private fun loadStatus() {
-        val configRepo = WidgetConfigRepository(this)
+        refreshWidgetList()
+        checkSession()
+    }
+    
+    private fun refreshWidgetList() {
         val widgetIds = configRepo.getAllWidgetIds()
         
         widgetsText.text = if (widgetIds.isEmpty()) {
@@ -47,18 +55,23 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+    
+    private fun checkSession() {
+        statusText.text = getString(R.string.checking_session)
         
-        // Test session
         CoroutineScope(Dispatchers.Main).launch {
             try {
-                statusText.text = getString(R.string.checking_session)
-                
                 val sessionManager = SessionManager(this@MainActivity)
                 val session = sessionManager.getSession()
                 
-                statusText.text = getString(R.string.session_active)
+                if (session.isValid()) {
+                    statusText.text = getString(R.string.session_active)
+                } else {
+                    statusText.text = "Session expired, refreshing..."
+                }
             } catch (e: Exception) {
-                statusText.text = getString(R.string.session_error, e.message)
+                statusText.text = getString(R.string.session_error, e.message ?: "Unknown error")
             }
         }
     }
