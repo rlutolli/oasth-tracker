@@ -18,7 +18,7 @@ class ModelsTest {
             lineDescr = "KAMARA",
             routeCode = "01K-1",
             vehicleCode = "1234",
-            estimatedMinutes = 5
+            rawTime = "5"
         )
         
         assertEquals("01K", arrival.lineId)
@@ -26,6 +26,16 @@ class ModelsTest {
         assertEquals("01K-1", arrival.routeCode)
         assertEquals("1234", arrival.vehicleCode)
         assertEquals(5, arrival.estimatedMinutes)
+        assertEquals("01K", arrival.displayLine)
+    }
+    
+    @Test
+    fun `BusArrival displayLine prefers lineId over routeCode`() {
+        val withLineId = BusArrival(lineId = "01K", routeCode = "01K-1")
+        assertEquals("01K", withLineId.displayLine)
+        
+        val onlyRouteCode = BusArrival(routeCode = "39")
+        assertEquals("39", onlyRouteCode.displayLine)
     }
     
     @Test
@@ -73,5 +83,6 @@ class ModelsTest {
         assertEquals("", arrival.routeCode)
         assertEquals("", arrival.vehicleCode)
         assertEquals(0, arrival.estimatedMinutes)
+        assertEquals("", arrival.displayLine)
     }
 }
