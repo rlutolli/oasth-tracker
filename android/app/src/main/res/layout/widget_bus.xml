@@ -31,9 +31,8 @@
             android:id="@+id/widget_refresh"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:src="@android:drawable/stat_notify_sync"
-            android:contentDescription="@string/tap_to_refresh"
-            app:tint="#FFAA00" />
+            android:src="@drawable/ic_refresh_pixel"
+            android:contentDescription="Refresh" />
     </LinearLayout>
 
     <!-- Separator line (using TextView because View is not allowed in RemoteViews) -->

@@ -10,6 +10,9 @@ import android.graphics.Typeface
 import android.util.Log
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.RelativeSizeSpan
 import androidx.core.content.res.ResourcesCompat
 import com.oasth.widget.R
 import com.oasth.widget.data.BusArrival
@@ -70,7 +73,13 @@ class BusRemoteViewsFactory(
         }
     }
     
-    private fun textAsBitmap(text: String, sizeSp: Float, color: Int, maxWidthDp: Int? = null): Bitmap {
+    private fun textAsBitmap(
+        text: CharSequence, 
+        sizeSp: Float, 
+        color: Int, 
+        maxWidthDp: Int? = null,
+        alignment: android.text.Layout.Alignment = android.text.Layout.Alignment.ALIGN_CENTER
+    ): Bitmap {
         val paint = android.text.TextPaint()
         paint.isAntiAlias = false
         paint.isFilterBitmap = false
@@ -82,18 +91,17 @@ class BusRemoteViewsFactory(
         val widthPx = if (maxWidthDp != null) {
              (maxWidthDp * context.resources.displayMetrics.density).toInt()
         } else {
-             // If no max width, measure text. But for destination we want wrapping.
-             // We'll assume a large width if null, or strictly measure.
-             paint.measureText(text).toInt() + 20
+             // If no max width, measure text. 
+             // Note: paint.measureText(String) works, but for CharSequence we need to be careful?
+             // StaticLayout handles CharSequence.
+             // We'll estimate width if not provided.
+             android.text.Layout.getDesiredWidth(text, paint).toInt() + 20
         }
 
-        // Use StaticLayout for wrapping
-        val alignment = android.text.Layout.Alignment.ALIGN_CENTER
         val spacingMult = 1f
         val spacingAdd = 0f
         val includePad = false
 
-        // Create layout
         val builder = android.text.StaticLayout.Builder.obtain(text, 0, text.length, paint, widthPx)
             .setAlignment(alignment)
             .setLineSpacing(spacingAdd, spacingMult)
@@ -159,27 +167,38 @@ class BusRemoteViewsFactory(
         return RemoteViews(context.packageName, R.layout.widget_item).apply {
             val color = 0xFFFFAA00.toInt()
             
-            // Line number (e.g., "14A", "31", "02K")
-            // Pass maxWidthDp=44 to ensure it fits (scales down if needed)
-            setImageViewBitmap(R.id.img_line, textAsBitmap(arrival.displayLine, 24f, color, 44))
+            // Line number: Center
+            setImageViewBitmap(R.id.img_line, textAsBitmap(arrival.displayLine, 24f, color, 44, android.text.Layout.Alignment.ALIGN_CENTER))
             
-            // Destination
+            // Destination: Left Aligned (ALIGN_NORMAL)
             var destination = arrival.lineDescr
             if (destination.isEmpty()) {
                 destination = lineRepo.getLineDescription(arrival.displayLine) ?: ""
             }
-            // Use 180dp max width for wrapping, and 20f text size (slightly smaller for fit)
-            setImageViewBitmap(R.id.img_destination, textAsBitmap(destination, 20f, color, 180))
+            // Use 180dp max width, ALIGN_NORMAL so text starts at left
+            setImageViewBitmap(R.id.img_destination, textAsBitmap(destination, 20f, color, 180, android.text.Layout.Alignment.ALIGN_NORMAL))
             
             // Sigma merged with Time
             // setImageViewBitmap(R.id.img_sigma, textAsBitmap("Σ", 22f, color))
             
-            // Time
-            val timeText = when {
+            // Time: Center (fitCenter handles centering the bitmap, but let's center text inside too)
+            // Enlarge the apostrophe
+            val minText = when {
                 arrival.estimatedMinutes <= 0 -> "NOW"
                 else -> "Σ ${arrival.estimatedMinutes}'"
             }
-            setImageViewBitmap(R.id.img_time, textAsBitmap(timeText, 24f, color, null))
+            
+            val spannableTime = SpannableString(minText)
+            if (minText.endsWith("'")) {
+                spannableTime.setSpan(
+                    RelativeSizeSpan(1.2f),
+                    minText.length - 1,
+                    minText.length,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+            
+            setImageViewBitmap(R.id.img_time, textAsBitmap(spannableTime, 24f, color, null, android.text.Layout.Alignment.ALIGN_CENTER))
         }
     }
     
