@@ -3,8 +3,11 @@ package com.oasth.widget.widget
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.RemoteViews
 import com.oasth.widget.R
@@ -13,10 +16,7 @@ import com.oasth.widget.data.OasthApi
 import com.oasth.widget.data.SessionManager
 import com.oasth.widget.data.WidgetConfigRepository
 import com.oasth.widget.ui.MainActivity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import java.util.concurrent.Executors
 
 /**
  * Home screen widget provider for bus arrivals
@@ -27,6 +27,9 @@ class BusWidgetProvider : AppWidgetProvider() {
         private const val TAG = "BusWidgetProvider"
         const val ACTION_REFRESH = "com.oasth.widget.ACTION_REFRESH"
         private const val MAX_ARRIVALS = 4
+        
+        private val executor = Executors.newSingleThreadExecutor()
+        private val mainHandler = Handler(Looper.getMainLooper())
     }
     
     override fun onUpdate(
@@ -36,7 +39,7 @@ class BusWidgetProvider : AppWidgetProvider() {
     ) {
         Log.d(TAG, "onUpdate called for ${appWidgetIds.size} widgets")
         for (widgetId in appWidgetIds) {
-            updateWidgetAsync(context, appWidgetManager, widgetId)
+            updateWidgetBackground(context.applicationContext, appWidgetManager, widgetId)
         }
     }
     
@@ -52,7 +55,7 @@ class BusWidgetProvider : AppWidgetProvider() {
             )
             if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
                 val manager = AppWidgetManager.getInstance(context)
-                updateWidgetAsync(context, manager, widgetId)
+                updateWidgetBackground(context.applicationContext, manager, widgetId)
             }
         }
     }
@@ -64,7 +67,7 @@ class BusWidgetProvider : AppWidgetProvider() {
         }
     }
     
-    private fun updateWidgetAsync(
+    private fun updateWidgetBackground(
         context: Context,
         appWidgetManager: AppWidgetManager,
         widgetId: Int
@@ -80,33 +83,88 @@ class BusWidgetProvider : AppWidgetProvider() {
         
         Log.d(TAG, "Updating widget $widgetId for stop ${config.stopCode}")
         
-        // Show loading state immediately
+        // Show loading state immediately on main thread
         showLoading(context, appWidgetManager, widgetId, config.stopName)
         
-        // Use goAsync() to allow background work in BroadcastReceiver
-        val pendingResult = goAsync()
-        
-        CoroutineScope(Dispatchers.IO).launch {
+        // Fetch data in background thread
+        executor.execute {
             try {
                 Log.d(TAG, "Fetching arrivals for ${config.stopCode}")
-                val sessionManager = SessionManager(context.applicationContext)
-                val api = OasthApi(sessionManager)
-                val arrivals = api.getArrivals(config.stopCode)
+                
+                // Simple synchronous HTTP request
+                val arrivals = fetchArrivalsSync(context, config.stopCode)
                 
                 Log.d(TAG, "Got ${arrivals.size} arrivals")
                 
-                withContext(Dispatchers.Main) {
+                // Update widget on main thread
+                mainHandler.post {
                     showArrivals(context, appWidgetManager, widgetId, config.stopName, config.stopCode, arrivals)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error fetching arrivals", e)
-                withContext(Dispatchers.Main) {
+                mainHandler.post {
                     showError(context, appWidgetManager, widgetId, config.stopName, config.stopCode, e.message)
                 }
-            } finally {
-                pendingResult.finish()
             }
         }
+    }
+    
+    private fun fetchArrivalsSync(context: Context, stopCode: String): List<BusArrival> {
+        // Get cached session or use static token
+        val prefs = context.getSharedPreferences("oasth_session", Context.MODE_PRIVATE)
+        val phpSessionId = prefs.getString("php_session_id", null)
+        val token = prefs.getString("token", "e2287129f7a2bbae422f3673c4944d703b84a1cf71e189f869de7da527d01137")
+        
+        if (phpSessionId == null) {
+            Log.d(TAG, "No session cached, returning empty")
+            return emptyList()
+        }
+        
+        val url = java.net.URL("https://telematics.oasth.gr/api/?act=getStopArrivals&p1=$stopCode")
+        val connection = url.openConnection() as java.net.HttpURLConnection
+        
+        try {
+            connection.requestMethod = "GET"
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36")
+            connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("X-CSRF-Token", token)
+            connection.setRequestProperty("Cookie", "PHPSESSID=$phpSessionId")
+            connection.setRequestProperty("X-Requested-With", "XMLHttpRequest")
+            connection.connectTimeout = 10000
+            connection.readTimeout = 10000
+            
+            val responseCode = connection.responseCode
+            Log.d(TAG, "Response code: $responseCode")
+            
+            if (responseCode == 200) {
+                val response = connection.inputStream.bufferedReader().readText()
+                Log.d(TAG, "Response: ${response.take(200)}")
+                return parseArrivals(response)
+            }
+        } finally {
+            connection.disconnect()
+        }
+        
+        return emptyList()
+    }
+    
+    private fun parseArrivals(json: String): List<BusArrival> {
+        val arrivals = mutableListOf<BusArrival>()
+        
+        try {
+            // Simple JSON parsing without Gson dependency in widget
+            val pattern = """"bline_id"\s*:\s*"([^"]+)".*?"route_code"\s*:\s*"([^"]+)".*?"bline2_id"\s*:\s*"([^"]+)".*?"arrivesInMins"\s*:\s*"([^"]+)"""".toRegex()
+            
+            pattern.findAll(json).forEach { match ->
+                val lineId = match.groupValues[1]
+                val mins = match.groupValues[4].toIntOrNull() ?: 0
+                arrivals.add(BusArrival(lineId, lineId, lineId, mins))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Parse error", e)
+        }
+        
+        return arrivals
     }
     
     private fun showNotConfigured(
@@ -197,7 +255,7 @@ class BusWidgetProvider : AppWidgetProvider() {
     ) {
         val views = RemoteViews(context.packageName, R.layout.widget_layout)
         views.setTextViewText(R.id.stop_name, stopName)
-        views.setTextViewText(R.id.arrivals_text, "⚠ ${errorMessage ?: "Tap to retry"}")
+        views.setTextViewText(R.id.arrivals_text, "Tap to retry")
         
         // Tap to refresh
         val refreshIntent = Intent(context, BusWidgetProvider::class.java).apply {
