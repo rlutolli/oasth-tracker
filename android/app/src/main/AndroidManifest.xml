@@ -50,6 +50,12 @@
                 android:resource="@xml/widget_info" />
         </receiver>
 
+        <!-- Widget RemoteViews Service for ListView -->
+        <service
+            android:name=".widget.BusRemoteViewsService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
     </application>
 
 </manifest>
