@@ -45,4 +45,9 @@
     <!-- Credits -->
     <string name="credits">Φτιαγμένο με ♥ από έναν duo enthusiast</string>
     <string name="credits_subtitle">Ανοιχτού κώδικα στο GitHub</string>
+    
+    <!-- Widget Headers (LED style) -->
+    <string name="header_line">ΓΡΑΜΜΗ</string>
+    <string name="header_destination">ΠΡΟΟΡΙΣΜΟΣ</string>
+    <string name="header_arrival">ΑΦΙΞΗ</string>
 </resources>
