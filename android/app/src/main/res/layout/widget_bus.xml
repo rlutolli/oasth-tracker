@@ -48,11 +48,10 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="4dp"
-        android:divider="#33FFAA00"
-        android:dividerHeight="1dp"
-        android:clipToPadding="false"
-        android:paddingVertical="4dp" />
+        android:background="#000000"
+        android:divider="@null"
+        android:dividerHeight="0dp"
+        android:padding="8dp" />
 
     <!-- Empty state -->
     <TextView

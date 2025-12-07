@@ -63,8 +63,8 @@ class BusRemoteViewsFactory(
     override fun onCreate() {
         Log.d(TAG, "onCreate for widget $appWidgetId")
         try {
-            // Load VT323 font directly from assets
-            customTypeface = Typeface.createFromAsset(context.assets, "vt323_regular.ttf")
+            // Load VT323 font from res/font using ResourcesCompat
+            customTypeface = ResourcesCompat.getFont(context, R.font.vt323_regular)
         } catch (e: Exception) {
             Log.e(TAG, "Could not load font: ${e.message}")
         }
