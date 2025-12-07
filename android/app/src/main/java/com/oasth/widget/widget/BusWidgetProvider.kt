@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import android.view.View
 import android.widget.RemoteViews
 import com.oasth.widget.R
 import com.oasth.widget.data.StopRepository
@@ -29,15 +30,17 @@ class BusWidgetProvider : AppWidgetProvider() {
             Log.d(TAG, "updateAppWidget: $appWidgetId")
             
             val configRepo = WidgetConfigRepository(context)
-            val stopRepo = StopRepository(context)
             val config = configRepo.getConfig(appWidgetId)
+            
+            // Layout is widget_bus
+            val views = RemoteViews(context.packageName, R.layout.widget_bus)
             
             if (config == null) {
                 Log.w(TAG, "No config for widget $appWidgetId")
-                val views = RemoteViews(context.packageName, R.layout.widget_bus)
-                views.setTextViewText(R.id.widget_stop_name, context.getString(R.string.tap_to_configure))
-                views.setTextViewText(R.id.widget_stop_code, "")
+                // Show "Loading..." or "Tap to Configure" in the empty view
                 views.setTextViewText(R.id.widget_empty, context.getString(R.string.tap_to_configure))
+                views.setViewVisibility(R.id.widget_list, View.GONE)
+                views.setViewVisibility(R.id.widget_empty, View.VISIBLE)
                 
                 // Tap to configure
                 val configIntent = Intent(context, WidgetConfigActivity::class.java).apply {
@@ -54,14 +57,7 @@ class BusWidgetProvider : AppWidgetProvider() {
                 return
             }
             
-            Log.d(TAG, "Config: stopCode=${config.stopCode}, name=${config.stopName}")
-            
-            // Get stop name from repository if not already set
-            val stopName = if (config.stopName.isNotEmpty()) {
-                config.stopName
-            } else {
-                stopRepo.getStopName(config.stopCode) ?: config.stopCode
-            }
+            Log.d(TAG, "Config loaded for widget $appWidgetId")
             
             // Set up RemoteViews with adapter for ListView
             val intent = Intent(context, BusRemoteViewsService::class.java).apply {
@@ -69,11 +65,9 @@ class BusWidgetProvider : AppWidgetProvider() {
                 data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
             }
             
-            val views = RemoteViews(context.packageName, R.layout.widget_bus)
-            views.setTextViewText(R.id.widget_stop_code, config.stopCode)
-            views.setTextViewText(R.id.widget_stop_name, stopName)
             views.setRemoteAdapter(R.id.widget_list, intent)
             views.setEmptyView(R.id.widget_list, R.id.widget_empty)
+            views.setTextViewText(R.id.widget_empty, context.getString(R.string.loading))
             
             // Refresh button
             val refreshIntent = Intent(context, BusWidgetProvider::class.java).apply {
@@ -86,6 +80,19 @@ class BusWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.widget_refresh, refreshPendingIntent)
             
+            // Allow tapping header to config (optional, kept for UX)
+            // But we don't have a specific header ID anymore except title row. 
+            // Let's bind config intent to title
+            val configIntent = Intent(context, WidgetConfigActivity::class.java).apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            val configPendingIntent = PendingIntent.getActivity(
+                context, appWidgetId, configIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_title, configPendingIntent)
+
             appWidgetManager.updateAppWidget(appWidgetId, views)
             
             // Trigger data refresh

@@ -3,32 +3,31 @@ package com.oasth.widget.widget
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import com.oasth.widget.R
+import com.oasth.widget.data.StopRepository
 import com.oasth.widget.data.WidgetConfig
 import com.oasth.widget.data.WidgetConfigRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.net.URL
 
 /**
- * Configuration activity for setting up a widget's stop code
+ * Configuration activity for setting up a widget
+ * Supports Multiple Stops (comma-separated) and Line Filtering.
  */
 class WidgetConfigActivity : AppCompatActivity() {
     
-    companion object {
-        private const val STATIC_TOKEN = "e2287129f7a2bbae422f3673c4944d703b84a1cf71e189f869de7da527d01137"
-    }
-    
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
     private lateinit var configRepo: WidgetConfigRepository
+    private lateinit var stopRepo: StopRepository
     
     private lateinit var stopCodeInput: EditText
     private lateinit var stopNameInput: EditText
+    private lateinit var lineFilterInput: EditText
     private lateinit var saveButton: Button
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,6 +37,7 @@ class WidgetConfigActivity : AppCompatActivity() {
         setResult(RESULT_CANCELED)
         
         configRepo = WidgetConfigRepository(this)
+        stopRepo = StopRepository(this)
         
         widgetId = intent.getIntExtra(
             AppWidgetManager.EXTRA_APPWIDGET_ID,
@@ -51,12 +51,20 @@ class WidgetConfigActivity : AppCompatActivity() {
         
         stopCodeInput = findViewById(R.id.stop_code_input)
         stopNameInput = findViewById(R.id.stop_name_input)
+        lineFilterInput = findViewById(R.id.line_filter_input)
         saveButton = findViewById(R.id.save_button)
         
         val existingConfig = configRepo.getConfig(widgetId)
         if (existingConfig != null) {
+            // Note: existingConfig.stopCode stores API IDs. 
+            // Ideally we should reverse map to Street IDs for display, 
+            // but for now we just show what's saved (API IDs or Street IDs if they differ).
+            // Since we save API IDs, showing them might be confusing if user entered Street IDs.
+            // But we don't have easy reverse mapping yet. 
+            // Let's assume advanced users or just show simple text.
             stopCodeInput.setText(existingConfig.stopCode)
             stopNameInput.setText(existingConfig.stopName)
+            lineFilterInput.setText(existingConfig.lineFilters)
         }
         
         saveButton.setOnClickListener {
@@ -65,89 +73,55 @@ class WidgetConfigActivity : AppCompatActivity() {
     }
     
     private fun saveConfiguration() {
-        val stopCode = stopCodeInput.text.toString().trim()
-        var stopName = stopNameInput.text.toString().trim()
+        val inputStopCodes = stopCodeInput.text.toString().trim()
+        val inputStopName = stopNameInput.text.toString().trim()
+        val inputFilters = lineFilterInput.text.toString().trim()
         
-        if (stopCode.isEmpty()) {
+        if (inputStopCodes.isEmpty()) {
             Toast.makeText(this, R.string.enter_stop_code, Toast.LENGTH_SHORT).show()
             return
         }
         
         saveButton.isEnabled = false
-        saveButton.text = getString(R.string.fetching_stop_name)
+        saveButton.text = getString(R.string.save) // "Save"
         
         CoroutineScope(Dispatchers.IO).launch {
-            // If stop name is empty, try to fetch it
-            if (stopName.isEmpty()) {
-                stopName = fetchStopName(stopCode) ?: "Stop $stopCode"
+            // 1. Parse multiple stops to get names
+            val streetIds = inputStopCodes.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val autoNames = mutableListOf<String>()
+            
+            for (streetId in streetIds) {
+                // Try to get name locally
+                val name = stopRepo.getStopName(streetId) ?: "Stop $streetId"
+                autoNames.add(name)
             }
             
-            val finalStopName = stopName
+            val finalName = if (inputStopName.isNotEmpty()) inputStopName else autoNames.joinToString(", ")
             
+            // 2. Save Config (Store Street IDs, resolve at runtime)
+            val config = WidgetConfig(
+                widgetId = widgetId,
+                stopCode = inputStopCodes, // Save as comma-separated Street IDs
+                stopName = finalName,
+                lineFilters = inputFilters
+            )
+            configRepo.saveConfig(config)
+            
+            // 3. Update Widget
+            val intent = Intent(this@WidgetConfigActivity, BusWidgetProvider::class.java).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(widgetId))
+            }
+            sendBroadcast(intent)
+            
+            // 4. Finish
             CoroutineScope(Dispatchers.Main).launch {
-                stopNameInput.setText(finalStopName)
-                
-                val config = WidgetConfig(
-                    widgetId = widgetId,
-                    stopCode = stopCode,
-                    stopName = finalStopName
-                )
-                configRepo.saveConfig(config)
-                
-                // Trigger widget update
-                val intent = Intent(this@WidgetConfigActivity, BusWidgetProvider::class.java).apply {
-                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(widgetId))
-                }
-                sendBroadcast(intent)
-                
                 val resultIntent = Intent().apply {
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
                 }
                 setResult(RESULT_OK, resultIntent)
                 finish()
             }
-        }
-    }
-    
-    private fun fetchStopName(stopCode: String): String? {
-        return try {
-            val prefs = getSharedPreferences("oasth_session", MODE_PRIVATE)
-            val phpSessionId = prefs.getString("php_session_id", null) ?: return null
-            val token = prefs.getString("token", STATIC_TOKEN) ?: STATIC_TOKEN
-            
-            // Try to get stop name from arrivals response
-            val url = URL("https://telematics.oasth.gr/api/?act=getStopArrivals&p1=$stopCode")
-            val connection = url.openConnection() as java.net.HttpURLConnection
-            
-            connection.requestMethod = "GET"
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android)")
-            connection.setRequestProperty("Accept", "application/json")
-            connection.setRequestProperty("X-CSRF-Token", token)
-            connection.setRequestProperty("Cookie", "PHPSESSID=$phpSessionId")
-            connection.setRequestProperty("X-Requested-With", "XMLHttpRequest")
-            connection.connectTimeout = 10000
-            connection.readTimeout = 10000
-            
-            if (connection.responseCode == 200) {
-                val response = connection.inputStream.bufferedReader().readText()
-                
-                // Try to extract stop description from response
-                val stopDescrPattern = """"stopDescr"\s*:\s*"([^"]+)"""".toRegex()
-                val match = stopDescrPattern.find(response)
-                
-                if (match != null) {
-                    return match.groupValues[1]
-                }
-                
-                // Fallback: try bstop_descr
-                val bstopPattern = """"bstop_descr"\s*:\s*"([^"]+)"""".toRegex()
-                bstopPattern.find(response)?.groupValues?.get(1)
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            null
         }
     }
 }

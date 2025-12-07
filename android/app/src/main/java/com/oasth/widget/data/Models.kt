@@ -65,6 +65,7 @@ data class SessionData(
  */
 data class WidgetConfig(
     val widgetId: Int,
-    val stopCode: String,
-    val stopName: String
+    val stopCode: String, // Comma-separated API IDs
+    val stopName: String,
+    val lineFilters: String = "" // Whitelist: "STREET_ID:LINE1,LINE2;..."
 )

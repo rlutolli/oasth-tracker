@@ -1,111 +1,81 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/widget_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@drawable/widget_background"
-    android:padding="8dp">
+    android:background="#FF121212"
+    android:padding="0dp">
 
-    <!-- Header row: ΓΡΑΜΜΗ | ΠΡΟΟΡΙΣΜΟΣ | ΑΦΙΞΗ -->
-    <LinearLayout
+    <!-- Top Bar: Title & Refresh -->
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingBottom="4dp">
+        android:layout_height="40dp"
+        android:background="#FF1E1E1E"
+        android:paddingHorizontal="12dp">
 
         <TextView
-            android:layout_width="40dp"
+            android:id="@+id/widget_title"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/header_line"
-            android:textColor="#FF8C00"
-            android:textSize="10sp"
-            android:fontFamily="monospace" />
+            android:layout_centerVertical="true"
+            android:text="OASTH LIVE"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.05"
+            android:fontFamily="sans-serif-medium" />
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/header_destination"
-            android:textColor="#FF8C00"
-            android:textSize="10sp"
-            android:fontFamily="monospace" />
-
-        <TextView
-            android:layout_width="40dp"
-            android:layout_height="wrap_content"
-            android:text="@string/header_arrival"
-            android:textColor="#FF8C00"
-            android:textSize="10sp"
-            android:gravity="end"
-            android:fontFamily="monospace" />
-
-        <ImageButton
+        <ImageView
             android:id="@+id/widget_refresh"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:layout_marginStart="4dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
             android:src="@android:drawable/ic_popup_sync"
-            android:background="@android:color/transparent"
-            android:contentDescription="@string/tap_to_refresh"
-            app:tint="#FF8C00" />
-    </LinearLayout>
+            android:contentDescription="Refresh"
+            android:tint="#FFD700" />
+    </RelativeLayout>
 
-    <!-- Bus arrivals list -->
-    <ListView
-        android:id="@+id/widget_list"
+    <!-- Content Area -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:divider="@android:color/transparent"
-        android:dividerHeight="2dp"
-        android:scrollbars="none"
-        android:cacheColorHint="@android:color/transparent"
-        android:listSelector="@android:color/transparent" />
+        android:background="#FF121212">
 
-    <!-- Empty state -->
-    <TextView
-        android:id="@+id/widget_empty"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:text="@string/no_buses"
-        android:textColor="#FF6600"
-        android:textSize="12sp"
-        android:fontFamily="monospace"
-        android:visibility="gone" />
+        <!-- Bus List -->
+        <ListView
+            android:id="@+id/widget_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:paddingBottom="8dp"
+            android:clipToPadding="false"
+            android:scrollbars="vertical" />
 
-    <!-- Footer: Stop code and name -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingTop="4dp"
-        android:gravity="center_vertical">
-
+        <!-- Loading / Empty View -->
         <TextView
-            android:id="@+id/widget_stop_code"
+            android:id="@+id/widget_empty"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:padding="2dp"
-            android:background="#333333"
-            android:textColor="#FFD700"
-            android:textSize="10sp"
-            android:fontFamily="monospace" />
+            android:layout_gravity="center"
+            android:text="LOADING..."
+            android:textColor="#88FFFFFF"
+            android:textSize="12sp"
+            android:letterSpacing="0.1"
+            android:fontFamily="sans-serif"
+            android:visibility="gone" />
 
-        <TextView
-            android:id="@+id/widget_stop_name"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:textColor="#FF8C00"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:maxLines="1"
-            android:ellipsize="end" />
-    </LinearLayout>
+    </FrameLayout>
+    
+    <!-- Bottom accent line -->
+    <!-- Bottom accent line -->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:src="@android:color/white"
+        android:tint="#FFD700" />
 
 </LinearLayout>

@@ -3,40 +3,47 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingVertical="3dp"
-    android:gravity="center_vertical">
+    android:gravity="center_vertical"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="12dp">
 
-    <!-- Line number (amber) -->
+    <!-- Line Number Box -->
     <TextView
         android:id="@+id/item_line"
         android:layout_width="40dp"
         android:layout_height="wrap_content"
-        android:textColor="#FFA500"
+        android:text="01N"
+        android:textColor="#FFD700"
         android:textSize="14sp"
         android:textStyle="bold"
-        android:fontFamily="monospace" />
+        android:gravity="center_vertical"
+        android:fontFamily="sans-serif-condensed" />
+        
+    <ImageView
+        android:layout_width="1dp"
+        android:layout_height="16dp"
+        android:src="@android:color/white"
+        android:tint="#33FFFFFF"
+        android:layout_marginHorizontal="12dp"/>
 
-    <!-- Destination (orange-white) -->
+    <!-- Times -->
     <TextView
         android:id="@+id/item_destination"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textColor="#FFD080"
-        android:textSize="12sp"
-        android:fontFamily="monospace"
-        android:maxLines="1"
-        android:ellipsize="end" />
+        android:text="3', 12', 45'"
+        android:textColor="#EEEEEE"
+        android:textSize="14sp"
+        android:fontFamily="sans-serif"
+        android:ellipsize="end"
+        android:maxLines="1" />
 
-    <!-- Arrival time (bright amber) -->
+    <!-- Legacy time field (hidden) -->
     <TextView
         android:id="@+id/item_time"
-        android:layout_width="40dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="#FFD700"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:gravity="end"
-        android:fontFamily="monospace" />
+        android:visibility="gone" />
 
 </LinearLayout>

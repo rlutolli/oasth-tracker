@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.appwidget.AppWidgetManager
 import android.util.Log
+import android.view.View
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import com.oasth.widget.R
@@ -19,13 +20,16 @@ import kotlinx.coroutines.runBlocking
  */
 class BusRemoteViewsService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
-        Log.d(TAG, "onGetViewFactory called")
         return BusRemoteViewsFactory(applicationContext, intent)
     }
-    
-    companion object {
-        private const val TAG = "BusRemoteViewsService"
-    }
+}
+
+/**
+ * Sealed class to represent different row types in the widget list
+ */
+sealed class WidgetItem {
+    data class Header(val stopName: String) : WidgetItem()
+    data class Row(val lineId: String, val times: String) : WidgetItem()
 }
 
 /**
@@ -45,7 +49,9 @@ class BusRemoteViewsFactory(
         AppWidgetManager.INVALID_APPWIDGET_ID
     )
     
-    private val arrivals = mutableListOf<BusArrival>()
+    // Using simple list of WidgetItem (Header or Row)
+    private val items = mutableListOf<WidgetItem>()
+    
     private val sessionManager = SessionManager(context)
     private val api = OasthApi(sessionManager)
     private val configRepo = WidgetConfigRepository(context)
@@ -58,68 +64,132 @@ class BusRemoteViewsFactory(
     override fun onDataSetChanged() {
         Log.d(TAG, "=== onDataSetChanged START ===")
         
-        arrivals.clear()
+        items.clear()
         
         val config = configRepo.getConfig(appWidgetId)
         if (config == null) {
-            Log.w(TAG, "No config found for widget $appWidgetId")
             return
         }
         
-        // Convert Street ID to API ID using StopRepository
-        val apiId = stopRepo.getApiId(config.stopCode)
-        Log.d(TAG, "Fetching arrivals for stop: ${config.stopCode} -> API ID: $apiId")
+        // 1. Parse Stops (Comma separated Street IDs)
+        val streetIds = config.stopCode.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        Log.d(TAG, "Config: rawCode='${config.stopCode}', parsedIds=$streetIds")
         
-        try {
-            val result = runBlocking {
-                api.getArrivals(apiId)
+        // 2. Parse Filters (e.g. "1403:01N,05; 1024:10")
+        val filterMap = mutableMapOf<String, Set<String>>()
+        if (config.lineFilters.isNotEmpty()) {
+            val rules = config.lineFilters.split(";")
+            for (rule in rules) {
+                if (rule.contains(":")) {
+                    val parts = rule.split(":")
+                    if (parts.size == 2) {
+                        val sId = parts[0].trim()
+                        val lines = parts[1].split(",").map { it.trim() }.toSet()
+                        filterMap[sId] = lines
+                    }
+                }
             }
-            
-            Log.d(TAG, "Got ${result.size} arrivals")
-            arrivals.addAll(result.sortedBy { it.estimatedMinutes })
-        } catch (e: Exception) {
-            Log.e(TAG, "Error fetching arrivals: ${e.message}", e)
+        }
+        Log.d(TAG, "Filters: raw='${config.lineFilters}', map=$filterMap")
+        
+        // 3. Update Loop
+        runBlocking {
+            for (streetId in streetIds) {
+                try {
+                    Log.d(TAG, "Processing StreetID: '$streetId'")
+                    
+                    // Resolve ID and Name locally
+                    val apiId = stopRepo.getApiId(streetId)
+                    val stopName = stopRepo.getStopName(streetId) ?: "Stop $streetId"
+                    
+                    // Fetch Arrivals
+                    val arrivals = api.getArrivals(apiId)
+                    Log.d(TAG, "Fetched ${arrivals.size} arrivals for $streetId (API: $apiId)")
+                    
+                    // Filter
+                    val validArrivals = if (filterMap.containsKey(streetId)) {
+                        val allowedLines = filterMap[streetId]!!
+                        val filtered = arrivals.filter { it.displayLine in allowedLines }
+                        Log.d(TAG, "Filtered $streetId: kept ${filtered.size} of ${arrivals.size}. Allowed: $allowedLines")
+                        filtered
+                    } else {
+                        arrivals
+                    }
+                    
+                    if (validArrivals.isNotEmpty()) {
+                        // Header with Stop Code
+                        items.add(WidgetItem.Header("$stopName ($streetId)"))
+                        
+                        // Group by Line
+                        val grouped = validArrivals.groupBy { it.displayLine }
+                        
+                        // Sort Line Groups by their NEAREST arrival time
+                        val sortedLines = grouped.keys.sortedBy { line ->
+                            grouped[line]?.minOfOrNull { it.estimatedMinutes } ?: Int.MAX_VALUE
+                        }
+                        
+                        for (line in sortedLines) {
+                            val lineArrivals = grouped[line] ?: emptyList()
+                            val sortedArrivals = lineArrivals.sortedBy { it.estimatedMinutes }
+                            
+                            val timeString = sortedArrivals.joinToString(", ") { "${it.estimatedMinutes}'" }
+                            items.add(WidgetItem.Row(line, timeString))
+                        }
+                    } else {
+                        // User request: just "same line vertically".
+                        // If no buses, let's show one header and "No buses" row so user knows it loaded
+                         items.add(WidgetItem.Header("$stopName ($streetId)"))
+                         items.add(WidgetItem.Row("", "No buses"))
+                    }
+                    
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error fetching for $streetId: ${e.message}")
+                    items.add(WidgetItem.Header("Stop $streetId"))
+                    items.add(WidgetItem.Row("Err", "Load failed"))
+                }
+            }
         }
         
-        Log.d(TAG, "=== onDataSetChanged END (${arrivals.size} items) ===")
+        Log.d(TAG, "=== onDataSetChanged END (${items.size} items) ===")
     }
     
     override fun onDestroy() {
-        arrivals.clear()
+        items.clear()
     }
     
-    override fun getCount(): Int = arrivals.size
+    override fun getCount(): Int {
+        return items.size
+    }
     
     override fun getViewAt(position: Int): RemoteViews? {
-        if (position >= arrivals.size) return null
+        if (position >= items.size) return null
         
-        val arrival = arrivals[position]
-        
-        return RemoteViews(context.packageName, R.layout.widget_item).apply {
-            // Line number (e.g., "10", "31")
-            setTextViewText(R.id.item_line, arrival.displayLine)
-            
-            // Destination - use lineDescr if available, otherwise show route code
-            val destination = if (arrival.lineDescr.isNotEmpty()) {
-                arrival.lineDescr.uppercase()
-            } else {
-                arrival.routeCode
+        return when (val item = items[position]) {
+            is WidgetItem.Header -> {
+                RemoteViews(context.packageName, R.layout.widget_header).apply {
+                    setTextViewText(R.id.header_text, item.stopName)
+                }
             }
-            setTextViewText(R.id.item_destination, destination)
-            
-            // Arrival time (e.g., "Σ 1'" like real display)
-            val timeText = if (arrival.estimatedMinutes == 0) {
-                "Σ 0'"
-            } else {
-                "Σ ${arrival.estimatedMinutes}'"
+            is WidgetItem.Row -> {
+                RemoteViews(context.packageName, R.layout.widget_item).apply {
+                    if (item.lineId.isEmpty()) {
+                        // "No buses" row, hide line number
+                        setViewVisibility(R.id.item_line, View.GONE)
+                    } else {
+                        setViewVisibility(R.id.item_line, View.VISIBLE)
+                        setTextViewText(R.id.item_line, item.lineId)
+                    }
+                    
+                    setTextViewText(R.id.item_destination, item.times) // Showing times in destination field
+                    setViewVisibility(R.id.item_time, View.GONE)       // Hide original time field
+                }
             }
-            setTextViewText(R.id.item_time, timeText)
         }
     }
     
     override fun getLoadingView(): RemoteViews? = null
     
-    override fun getViewTypeCount(): Int = 1
+    override fun getViewTypeCount(): Int = 2
     
     override fun getItemId(position: Int): Long = position.toLong()
     
