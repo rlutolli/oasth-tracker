@@ -71,40 +71,48 @@ class BusRemoteViewsFactory(
     }
     
     private fun textAsBitmap(text: String, sizeSp: Float, color: Int, maxWidthDp: Int? = null): Bitmap {
-        val paint = Paint() // No ANTI_ALIAS_FLAG for sharp pixels
+        val paint = android.text.TextPaint()
         paint.isAntiAlias = false
         paint.isFilterBitmap = false
         paint.textSize = sizeSp * context.resources.displayMetrics.scaledDensity
         paint.color = color
         paint.typeface = customTypeface ?: Typeface.MONOSPACE
-        
-        // Measure text
-        var textWidth = paint.measureText(text)
-        val textBounds = android.graphics.Rect()
-        paint.getTextBounds(text, 0, text.length, textBounds)
-        val textHeight = textBounds.height()
-        
-        // Scale down if maxWidth is provided and text is too wide (e.g. "01M")
-        if (maxWidthDp != null) {
-            val validWidthPx = maxWidthDp * context.resources.displayMetrics.density
-            if (textWidth > validWidthPx) {
-                val scale = validWidthPx / textWidth
-                paint.textSize *= scale
-                textWidth = paint.measureText(text) // Re-measure
-            }
+
+        // Determine available width
+        val widthPx = if (maxWidthDp != null) {
+             (maxWidthDp * context.resources.displayMetrics.density).toInt()
+        } else {
+             // If no max width, measure text. But for destination we want wrapping.
+             // We'll assume a large width if null, or strictly measure.
+             paint.measureText(text).toInt() + 20
         }
+
+        // Use StaticLayout for wrapping
+        val alignment = android.text.Layout.Alignment.ALIGN_CENTER
+        val spacingMult = 1f
+        val spacingAdd = 0f
+        val includePad = false
+
+        // Create layout
+        val builder = android.text.StaticLayout.Builder.obtain(text, 0, text.length, paint, widthPx)
+            .setAlignment(alignment)
+            .setLineSpacing(spacingAdd, spacingMult)
+            .setIncludePad(includePad)
+            .setMaxLines(2)
+            .setEllipsize(android.text.TextUtils.TruncateAt.END)
         
-        // Add some padding to height to avoid cutting off descenders
-        val height = (paint.textSize * 1.2).toInt()
-        val width = textWidth.toInt().coerceAtLeast(1)
-        
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val layout = builder.build()
+
+        // Calculate dimensions
+        val height = layout.height.coerceAtLeast(1)
+        val width = layout.width.coerceAtLeast(1)
+
+        val bitmap = Bitmap.createBitmap(widthPx, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         
-        // Draw text centered vertically-ish (baseline)
-        val baseline = height - (height - textHeight) / 2f - paint.descent() / 2f
-        canvas.drawText(text, 0f, baseline + paint.textSize * 0.2f, paint) // Adjust baseline slightly
-        
+        // Draw
+        layout.draw(canvas)
+
         return bitmap
     }
     
@@ -160,7 +168,8 @@ class BusRemoteViewsFactory(
             if (destination.isEmpty()) {
                 destination = lineRepo.getLineDescription(arrival.displayLine) ?: ""
             }
-            setImageViewBitmap(R.id.img_destination, textAsBitmap(destination, 22f, color))
+            // Use 180dp max width for wrapping, and 20f text size (slightly smaller for fit)
+            setImageViewBitmap(R.id.img_destination, textAsBitmap(destination, 20f, color, 180))
             
             // Sigma
             setImageViewBitmap(R.id.img_sigma, textAsBitmap("Σ", 22f, color))
@@ -170,7 +179,7 @@ class BusRemoteViewsFactory(
                 arrival.estimatedMinutes <= 0 -> "NOW"
                 else -> "${arrival.estimatedMinutes}'"
             }
-            setImageViewBitmap(R.id.img_time, textAsBitmap(timeText, 22f, color))
+            setImageViewBitmap(R.id.img_time, textAsBitmap(timeText, 22f, color, 50))
         }
     }
     

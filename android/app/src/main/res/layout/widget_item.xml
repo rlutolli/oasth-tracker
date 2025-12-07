@@ -12,14 +12,14 @@
     <ImageView
         android:id="@+id/img_line"
         android:layout_width="44dp"
-        android:layout_height="30dp"
+        android:layout_height="40dp"
         android:scaleType="fitCenter" />
 
     <!-- Destination (Bitmap) -->
     <ImageView
         android:id="@+id/img_destination"
         android:layout_width="0dp"
-        android:layout_height="30dp"
+        android:layout_height="40dp"
         android:layout_weight="1"
         android:layout_marginStart="4dp"
         android:scaleType="fitCenter" />
@@ -28,7 +28,7 @@
     <ImageView
         android:id="@+id/img_sigma"
         android:layout_width="20dp"
-        android:layout_height="30dp"
+        android:layout_height="40dp"
         android:scaleType="fitCenter"
         android:paddingHorizontal="2dp" />
 
@@ -36,7 +36,7 @@
     <ImageView
         android:id="@+id/img_time"
         android:layout_width="wrap_content"
-        android:layout_height="30dp"
+        android:layout_height="40dp"
         android:minWidth="36dp"
         android:scaleType="fitEnd" />
 
