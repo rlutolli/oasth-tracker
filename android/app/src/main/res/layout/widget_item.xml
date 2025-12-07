@@ -24,13 +24,7 @@
         android:layout_marginStart="4dp"
         android:scaleType="fitCenter" />
 
-    <!-- Arrival indicator Σ (Bitmap) -->
-    <ImageView
-        android:id="@+id/img_sigma"
-        android:layout_width="20dp"
-        android:layout_height="40dp"
-        android:scaleType="fitCenter"
-        android:paddingHorizontal="2dp" />
+
 
     <!-- Arrival time (Bitmap) -->
     <ImageView

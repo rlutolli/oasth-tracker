@@ -171,15 +171,15 @@ class BusRemoteViewsFactory(
             // Use 180dp max width for wrapping, and 20f text size (slightly smaller for fit)
             setImageViewBitmap(R.id.img_destination, textAsBitmap(destination, 20f, color, 180))
             
-            // Sigma
-            setImageViewBitmap(R.id.img_sigma, textAsBitmap("Σ", 22f, color))
+            // Sigma merged with Time
+            // setImageViewBitmap(R.id.img_sigma, textAsBitmap("Σ", 22f, color))
             
             // Time
             val timeText = when {
                 arrival.estimatedMinutes <= 0 -> "NOW"
-                else -> "${arrival.estimatedMinutes}'"
+                else -> "Σ ${arrival.estimatedMinutes}'"
             }
-            setImageViewBitmap(R.id.img_time, textAsBitmap(timeText, 22f, color, 50))
+            setImageViewBitmap(R.id.img_time, textAsBitmap(timeText, 22f, color, 60))
         }
     }
     
