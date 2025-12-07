@@ -152,13 +152,19 @@ class BusWidgetProvider : AppWidgetProvider() {
         val arrivals = mutableListOf<BusArrival>()
         
         try {
-            // Simple JSON parsing without Gson dependency in widget
-            val pattern = """"bline_id"\s*:\s*"([^"]+)".*?"route_code"\s*:\s*"([^"]+)".*?"bline2_id"\s*:\s*"([^"]+)".*?"arrivesInMins"\s*:\s*"([^"]+)"""".toRegex()
+            // Simple JSON parsing - look for bline_id and btime2
+            val pattern = """"bline_id"\s*:\s*"([^"]+)".*?"btime2"\s*:\s*(\d+)""".toRegex()
             
             pattern.findAll(json).forEach { match ->
                 val lineId = match.groupValues[1]
-                val mins = match.groupValues[4].toIntOrNull() ?: 0
-                arrivals.add(BusArrival(lineId, lineId, lineId, mins))
+                val mins = match.groupValues[2].toIntOrNull() ?: 0
+                arrivals.add(BusArrival(
+                    lineId = lineId,
+                    lineDescr = lineId,
+                    routeCode = "",
+                    vehicleCode = "",
+                    estimatedMinutes = mins
+                ))
             }
         } catch (e: Exception) {
             Log.e(TAG, "Parse error", e)
