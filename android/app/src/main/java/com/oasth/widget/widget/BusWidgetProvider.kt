@@ -5,16 +5,18 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import android.widget.RemoteViews
 import com.oasth.widget.R
 import com.oasth.widget.data.BusArrival
 import com.oasth.widget.data.OasthApi
 import com.oasth.widget.data.SessionManager
 import com.oasth.widget.data.WidgetConfigRepository
+import com.oasth.widget.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Home screen widget provider for bus arrivals
@@ -22,24 +24,26 @@ import kotlinx.coroutines.launch
 class BusWidgetProvider : AppWidgetProvider() {
     
     companion object {
+        private const val TAG = "BusWidgetProvider"
         const val ACTION_REFRESH = "com.oasth.widget.ACTION_REFRESH"
         private const val MAX_ARRIVALS = 4
     }
-    
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
+        Log.d(TAG, "onUpdate called for ${appWidgetIds.size} widgets")
         for (widgetId in appWidgetIds) {
-            updateWidget(context, appWidgetManager, widgetId)
+            updateWidgetAsync(context, appWidgetManager, widgetId)
         }
     }
     
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
+        
+        Log.d(TAG, "onReceive: ${intent.action}")
         
         if (intent.action == ACTION_REFRESH) {
             val widgetId = intent.getIntExtra(
@@ -48,7 +52,7 @@ class BusWidgetProvider : AppWidgetProvider() {
             )
             if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
                 val manager = AppWidgetManager.getInstance(context)
-                updateWidget(context, manager, widgetId)
+                updateWidgetAsync(context, manager, widgetId)
             }
         }
     }
@@ -60,7 +64,7 @@ class BusWidgetProvider : AppWidgetProvider() {
         }
     }
     
-    private fun updateWidget(
+    private fun updateWidgetAsync(
         context: Context,
         appWidgetManager: AppWidgetManager,
         widgetId: Int
@@ -69,24 +73,38 @@ class BusWidgetProvider : AppWidgetProvider() {
         val config = configRepo.getConfig(widgetId)
         
         if (config == null) {
-            // Widget not configured yet
+            Log.d(TAG, "Widget $widgetId not configured")
             showNotConfigured(context, appWidgetManager, widgetId)
             return
         }
         
-        // Show loading state
+        Log.d(TAG, "Updating widget $widgetId for stop ${config.stopCode}")
+        
+        // Show loading state immediately
         showLoading(context, appWidgetManager, widgetId, config.stopName)
         
-        // Fetch arrivals in background
-        scope.launch {
+        // Use goAsync() to allow background work in BroadcastReceiver
+        val pendingResult = goAsync()
+        
+        CoroutineScope(Dispatchers.IO).launch {
             try {
-                val sessionManager = SessionManager(context)
+                Log.d(TAG, "Fetching arrivals for ${config.stopCode}")
+                val sessionManager = SessionManager(context.applicationContext)
                 val api = OasthApi(sessionManager)
                 val arrivals = api.getArrivals(config.stopCode)
                 
-                showArrivals(context, appWidgetManager, widgetId, config.stopName, arrivals)
+                Log.d(TAG, "Got ${arrivals.size} arrivals")
+                
+                withContext(Dispatchers.Main) {
+                    showArrivals(context, appWidgetManager, widgetId, config.stopName, config.stopCode, arrivals)
+                }
             } catch (e: Exception) {
-                showError(context, appWidgetManager, widgetId, config.stopName)
+                Log.e(TAG, "Error fetching arrivals", e)
+                withContext(Dispatchers.Main) {
+                    showError(context, appWidgetManager, widgetId, config.stopName, config.stopCode, e.message)
+                }
+            } finally {
+                pendingResult.finish()
             }
         }
     }
@@ -103,6 +121,7 @@ class BusWidgetProvider : AppWidgetProvider() {
         // Click to open config
         val configIntent = Intent(context, WidgetConfigActivity::class.java).apply {
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pendingIntent = PendingIntent.getActivity(
             context, widgetId, configIntent,
@@ -131,6 +150,7 @@ class BusWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         widgetId: Int,
         stopName: String,
+        stopCode: String,
         arrivals: List<BusArrival>
     ) {
         val views = RemoteViews(context.packageName, R.layout.widget_layout)
@@ -152,16 +172,17 @@ class BusWidgetProvider : AppWidgetProvider() {
         
         views.setTextViewText(R.id.arrivals_text, arrivalsText)
         
-        // Refresh on click
-        val refreshIntent = Intent(context, BusWidgetProvider::class.java).apply {
-            action = ACTION_REFRESH
-            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+        // Tap opens main app
+        val mainIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("stopCode", stopCode)
+            putExtra("stopName", stopName)
         }
-        val pendingIntent = PendingIntent.getBroadcast(
-            context, widgetId, refreshIntent,
+        val mainPendingIntent = PendingIntent.getActivity(
+            context, widgetId, mainIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
+        views.setOnClickPendingIntent(R.id.widget_container, mainPendingIntent)
         
         appWidgetManager.updateAppWidget(widgetId, views)
     }
@@ -170,13 +191,15 @@ class BusWidgetProvider : AppWidgetProvider() {
         context: Context,
         appWidgetManager: AppWidgetManager,
         widgetId: Int,
-        stopName: String
+        stopName: String,
+        stopCode: String,
+        errorMessage: String?
     ) {
         val views = RemoteViews(context.packageName, R.layout.widget_layout)
         views.setTextViewText(R.id.stop_name, stopName)
-        views.setTextViewText(R.id.arrivals_text, context.getString(R.string.error_loading))
+        views.setTextViewText(R.id.arrivals_text, "⚠ ${errorMessage ?: "Tap to retry"}")
         
-        // Refresh on click
+        // Tap to refresh
         val refreshIntent = Intent(context, BusWidgetProvider::class.java).apply {
             action = ACTION_REFRESH
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)

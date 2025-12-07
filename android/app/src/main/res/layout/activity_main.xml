@@ -59,6 +59,34 @@
 
     <View
         android:layout_width="match_parent"
+        android:layout_height="24dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Updates"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/update_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/update_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Download Update"
+        android:visibility="gone" />
+
+    <View
+        android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
 
