@@ -17,20 +17,13 @@
         android:maxLines="1"
         android:ellipsize="end" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="6dp"
-        android:layout_marginBottom="6dp"
-        android:background="#40FFFFFF" />
-
     <TextView
         android:id="@+id/arrivals_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
         android:textSize="13sp"
         android:textColor="#E0E0E0"
-        android:lineSpacingExtra="4dp"
-        android:fontFamily="monospace" />
+        android:lineSpacingExtra="4dp" />
 
 </LinearLayout>
