@@ -1,0 +1,37 @@
+Total Lines Found: 269
+First Line Sample in List: {'LineCode': '620', 'LineID': ' 1N', 'LineIDGR': ' 1Ν', 'LineDescr': 'Κ.Τ.Ε.Λ. - ΑΕΡΟΔΡΟΜΙΟ ΜΕΣΩ Α.Σ. Ι.Κ.Ε.Α.', 'LineDescrEng': 'AIRPORT-INTERCITY BUS TERMINAL'}
+
+==================================================
+Line Object: {'LineCode': '146', 'LineID': '01N', 'LineIDGR': '01N', 'LineDescr': 'Κ.Τ.Ε.Λ. - ΑΕΡΟΔΡΟΜΙΟ ΝΥΧΤΕΡΙΝΟ', 'LineDescrEng': 'AIRPORT-INTERCITY BUS TERMINAL (VIA CITY CENTRE)-NIGHT LINE'}
+--- Fecthing routes for Line 01N using Internal ID 146 ---
+SUCCESS. Found 2 routes.
+   Route: {'RouteCode': '2279', 'LineCode': '146', 'RouteDescr': 'Κ.Τ.Ε.Λ. - ΑΕΡΟΔΡΟΜΙΟ ΝΥΧΤΕΡΙΝΟ', 'RouteDescrEng': 'AIRPORT-INTERCITY BUS TERMINAL (VIA CITY CENTRE)-NIGHT LINE-TRANSITION', 'RouteType': '1', 'RouteDistance': '21014.580000000002'}
+     Stops Found: 51
+     First Stop Valid Keys: ['StopCode', 'StopID', 'StopDescr', 'StopDescrEng', 'StopStreet', 'StopStreetEng', 'StopHeading', 'StopLat', 'StopLng', 'RouteStopOrder', 'StopType', 'StopAmea']
+     First Stop: {'StopCode': '819', 'StopID': '13011', 'StopDescr': 'Τ.Σ. Κ.Τ.Ε.Λ. ', 'StopDescrEng': 'T.S. K.T.E.L. ', 'StopStreet': 'ΠΑΡ.ΛΕΩΦ.ΔΕΝ/ΜΟΥ', 'StopStreetEng': None, 'StopHeading': '10', 'StopLat': '40.654059500000002', 'StopLng': '22.901772000000001', 'RouteStopOrder': '1', 'StopType': '0', 'StopAmea': '0'}
+   Route: {'RouteCode': '2280', 'LineCode': '146', 'RouteDescr': 'ΑΕΡΟΔΡΟΜΙΟ - Κ.Τ.Ε.Λ. ΝΥΧΤΕΡΙΝΟ', 'RouteDescrEng': 'AIRPORT-INTERCITY BUS TERMINAL (VIA CITY CENTRE)-NIGHT LINE-RETURN', 'RouteType': '2', 'RouteDistance': '20499.880000000001'}
+     Stops Found: 52
+     First Stop Valid Keys: ['StopCode', 'StopID', 'StopDescr', 'StopDescrEng', 'StopStreet', 'StopStreetEng', 'StopHeading', 'StopLat', 'StopLng', 'RouteStopOrder', 'StopType', 'StopAmea']
+     First Stop: {'StopCode': '843', 'StopID': '36013', 'StopDescr': 'ΑΕΡΟΔΡΟΜΙΟ ΜΑΚΕΔΟΝΙΑ - ΑΦΙΞΕΙΣ', 'StopDescrEng': 'MACEDONIA AIRPORT - ARRIVALS', 'StopStreet': None, 'StopStreetEng': None, 'StopHeading': '127', 'StopLat': '40.524113', 'StopLng': '22.9773505', 'RouteStopOrder': '1', 'StopType': '0', 'StopAmea': '0'}
+
+==================================================
+Line Object: {'LineCode': '57', 'LineID': '53', 'LineIDGR': '53', 'LineDescr': 'ΤΟΠΙΚΟ ΣΙΝΔΟΥ', 'LineDescrEng': 'TOPIKO SINDOU'}
+--- Fecthing routes for Line 53 using Internal ID 57 ---
+SUCCESS. Found 1 routes.
+   Route: {'RouteCode': '2674', 'LineCode': '57', 'RouteDescr': 'ΤΟΠΙΚΟ ΣΙΝΔΟΥ', 'RouteDescrEng': 'TOPIKO SINDOU', 'RouteType': '1', 'RouteDistance': '16510.970000000001'}
+     Stops Found: 38
+     First Stop Valid Keys: ['StopCode', 'StopID', 'StopDescr', 'StopDescrEng', 'StopStreet', 'StopStreetEng', 'StopHeading', 'StopLat', 'StopLng', 'RouteStopOrder', 'StopType', 'StopAmea']
+     First Stop: {'StopCode': '842', 'StopID': '20021', 'StopDescr': 'Τ.Σ. ΣΙΝΔΟΥ', 'StopDescrEng': 'T.S. SINDOU', 'StopStreet': 'ΓΟΡΓΟΠΟΤΑΜΟΥ', 'StopStreetEng': None, 'StopHeading': '347', 'StopLat': '40.664138000000001', 'StopLng': '22.8011515', 'RouteStopOrder': '1', 'StopType': '0', 'StopAmea': '0'}
+
+==================================================
+Line Object: {'LineCode': '103', 'LineID': '57', 'LineIDGR': '57', 'LineDescr': 'Δ/ΣΗ ΧΟΡΤΙΑΤΗ- ΑΣΒΕΣΤΟΧΩΡΙ - ΕΡΜΟΥ', 'LineDescrEng': 'D/SI CHORTIATI-ASVESTOCHORI - ERMOU'}
+--- Fecthing routes for Line 57 using Internal ID 103 ---
+SUCCESS. Found 2 routes.
+   Route: {'RouteCode': '212', 'LineCode': '103', 'RouteDescr': 'ΕΡΜΟΥ - ΑΣΒΕΣΤΟΧΩΡΙ - Δ/ΣΗ ΧΟΡΤΙΑΤΗ', 'RouteDescrEng': 'ERMOU-ASVESTOCHORI-D/SI CHORTIATI', 'RouteType': '2', 'RouteDistance': '14904.24'}
+     Stops Found: 49
+     First Stop Valid Keys: ['StopCode', 'StopID', 'StopDescr', 'StopDescrEng', 'StopStreet', 'StopStreetEng', 'StopHeading', 'StopLat', 'StopLng', 'RouteStopOrder', 'StopType', 'StopAmea']
+     First Stop: {'StopCode': '1183', 'StopID': '1344', 'StopDescr': 'Τ.Σ. ΕΡΜΟΥ', 'StopDescrEng': 'T.S. ERMOU', 'StopStreet': 'ΕΡΜΟΥ ', 'StopStreetEng': None, 'StopHeading': '111', 'StopLat': '40.636317499999997', 'StopLng': '22.940291500000001', 'RouteStopOrder': '1', 'StopType': '0', 'StopAmea': '0'}
+   Route: {'RouteCode': '213', 'LineCode': '103', 'RouteDescr': 'Δ/ΣΗ ΧΟΡΤΙΑΤΗ - ΑΣΒΕΣΤΟΧΩΡΙ - ΕΡΜΟΥ', 'RouteDescrEng': 'D/SI CHORTIATI-ASVESTOCHORI-ERMOU', 'RouteType': '1', 'RouteDistance': '14828.1'}
+     Stops Found: 48
+     First Stop Valid Keys: ['StopCode', 'StopID', 'StopDescr', 'StopDescrEng', 'StopStreet', 'StopStreetEng', 'StopHeading', 'StopLat', 'StopLng', 'RouteStopOrder', 'StopType', 'StopAmea']
+     First Stop: {'StopCode': '1170', 'StopID': '16074', 'StopDescr': 'ΣΤΑΘΜΟΣ ΜΕΤΕΠΙΒΙΒΑΣΗΣ ΔΙΑΣΤΑΥΡΩΣΗ ΧΟΡΤΙΑΤΗ', 'StopDescrEng': 'STATHMOS METEPIVIVASIS DIASTAVROSI HORTIATI', 'StopStreet': 'ΔΙΑΣΤΑΥΡΩΣΗ ΧΟΡΤΙΑΤΗ', 'StopStreetEng': None, 'StopHeading': '319', 'StopLat': '40.624477499999998', 'StopLng': '23.062598999999999', 'RouteStopOrder': '1', 'StopType': '0', 'StopAmea': '0'}

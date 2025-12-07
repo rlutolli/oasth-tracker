@@ -19,8 +19,15 @@ data class BusArrival(
     val vehicleCode: String = "",
     
     @SerializedName("btime2")
-    val estimatedMinutes: Int = 0
-)
+    val estimatedMinutesStr: String = ""
+) {
+    val estimatedMinutes: Int
+        get() = try {
+            estimatedMinutesStr.toInt()
+        } catch (e: Exception) {
+            0
+        }
+}
 
 /**
  * Bus line information
