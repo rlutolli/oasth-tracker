@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OASTH Live</string>
+    <string name="widget_name">Bus Arrivals</string>
+    <string name="widget_description">Shows real-time bus arrivals for your stop</string>
+    
+    <!-- Widget -->
+    <string name="tap_to_configure">Tap to configure</string>
+    <string name="loading">Loading…</string>
+    <string name="no_buses">No buses scheduled</string>
+    <string name="no_buses_night">🌙 Night - first bus ~5:30 AM</string>
+    <string name="no_buses_early">💤 Too early - buses start soon</string>
+    <string name="error_loading">📡 Tap to refresh</string>
+    <string name="tap_to_refresh">↻ Tap to refresh</string>
+    
+    <!-- Config Activity -->
+    <string name="configure_widget">Configure Widget</string>
+    <string name="stop_code_label">Stop Code *</string>
+    <string name="stop_code_hint">e.g. 1029</string>
+    <string name="stop_name_label">Stop Name (auto-detected)</string>
+    <string name="stop_name_hint">Leave empty to auto-fetch</string>
+    <string name="save">Save</string>
+    <string name="enter_stop_code">Please enter a stop code</string>
+    <string name="fetching_stop_name">Fetching stop name…</string>
+    
+    <!-- Main Activity -->
+    <string name="app_description">Real-time bus arrivals for Thessaloniki</string>
+    <string name="status_title">Session Status</string>
+    <string name="checking_session">Checking session…</string>
+    <string name="session_active">✓ Session active</string>
+    <string name="session_error">Error: %s</string>
+    <string name="widgets_title">Your Widgets</string>
+    <string name="no_widgets_configured">No widgets configured yet.\nLong-press your home screen to add one.</string>
+    <string name="configured_widgets">%d widget(s) configured:</string>
+    <string name="how_to_add">Long-press home screen → Widgets → OASTH Live</string>
+    
+    <!-- Version & Updates -->
+    <string name="version_title">App Version</string>
+    <string name="version_current">v%s</string>
+    <string name="version_up_to_date">✓ Up to date</string>
+    <string name="version_update_available">⬆ Update available: %s</string>
+    <string name="version_checking">Checking for updates…</string>
+    <string name="download_update">Download Update</string>
+    
+    <!-- Credits -->
+    <string name="credits">Made with ♥ by a fellow duo enthusiast</string>
+    <string name="credits_subtitle">Open source on GitHub</string>
+</resources>

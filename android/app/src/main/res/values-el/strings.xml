@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ΟΑΣΘ Live</string>
+    <string name="widget_name">Αφίξεις Λεωφορείων</string>
+    <string name="widget_description">Εμφανίζει αφίξεις σε πραγματικό χρόνο</string>
+    
+    <!-- Widget -->
+    <string name="tap_to_configure">Πατήστε για ρύθμιση</string>
+    <string name="loading">Φόρτωση…</string>
+    <string name="no_buses">Δεν υπάρχουν δρομολόγια</string>
+    <string name="no_buses_night">🌙 Νύχτα - πρώτο ~5:30 πμ</string>
+    <string name="no_buses_early">💤 Πολύ νωρίς - σύντομα</string>
+    <string name="error_loading">📡 Πατήστε για ανανέωση</string>
+    <string name="tap_to_refresh">↻ Πατήστε για ανανέωση</string>
+    
+    <!-- Config Activity -->
+    <string name="configure_widget">Ρύθμιση Widget</string>
+    <string name="stop_code_label">Κωδικός Στάσης *</string>
+    <string name="stop_code_hint">π.χ. 1029</string>
+    <string name="stop_name_label">Όνομα Στάσης (αυτόματο)</string>
+    <string name="stop_name_hint">Κενό για αυτόματη εύρεση</string>
+    <string name="save">Αποθήκευση</string>
+    <string name="enter_stop_code">Εισάγετε κωδικό στάσης</string>
+    <string name="fetching_stop_name">Αναζήτηση ονόματος…</string>
+    
+    <!-- Main Activity -->
+    <string name="app_description">Αφίξεις λεωφορείων Θεσσαλονίκης σε πραγματικό χρόνο</string>
+    <string name="status_title">Κατάσταση Σύνδεσης</string>
+    <string name="checking_session">Έλεγχος σύνδεσης…</string>
+    <string name="session_active">✓ Σύνδεση ενεργή</string>
+    <string name="session_error">Σφάλμα: %s</string>
+    <string name="widgets_title">Τα Widget σας</string>
+    <string name="no_widgets_configured">Δεν υπάρχουν widgets.\nΠατήστε παρατεταμένα στην αρχική οθόνη.</string>
+    <string name="configured_widgets">%d widget ρυθμισμένα:</string>
+    <string name="how_to_add">Παρατεταμένο πάτημα → Widgets → ΟΑΣΘ Live</string>
+    
+    <!-- Version & Updates -->
+    <string name="version_title">Έκδοση Εφαρμογής</string>
+    <string name="version_current">v%s</string>
+    <string name="version_up_to_date">✓ Ενημερωμένη</string>
+    <string name="version_update_available">⬆ Διαθέσιμη ενημέρωση: %s</string>
+    <string name="version_checking">Έλεγχος ενημερώσεων…</string>
+    <string name="download_update">Λήψη Ενημέρωσης</string>
+    
+    <!-- Credits -->
+    <string name="credits">Φτιαγμένο με ♥ από έναν duo enthusiast</string>
+    <string name="credits_subtitle">Ανοιχτού κώδικα στο GitHub</string>
+</resources>

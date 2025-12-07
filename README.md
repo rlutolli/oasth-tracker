@@ -1,76 +1,136 @@
-OASTH KDE Live Tracker (Thessaloniki Bus Widget)
+# OASTH Live 🚌
 
-This repository contains a low-resource, self-healing Python script designed to fetch real-time bus arrival data for OASTH (Thessaloniki) and display it cleanly on a KDE Plasma desktop using the Command Output widget.
+Real-time bus arrivals for Thessaloniki, Greece — as a home screen widget!
 
-The script bypasses the public website's anti-bot/session security checks by using a headless browser to establish a valid connection, keeping the widget reliable and low on resource usage between updates.
+<p align="center">
+  <img src="https://img.shields.io/github/v/release/rlutolli/oasth-tracker?style=flat-square" alt="Release">
+  <img src="https://img.shields.io/github/license/rlutolli/oasth-tracker?style=flat-square" alt="License">
+</p>
 
-![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+---
 
-You must have Git and Python 3 installed, along with the venv utility for environment isolation.
+## 📱 For Users
 
-# 1. Install necessary Python environment tool
-sudo apt install python3-venv
+### Download & Install
 
-Follow these steps to set up the necessary environment and download the Playwright browser engine.
+1. **Download** the latest APK from [Releases](https://github.com/rlutolli/oasth-tracker/releases)
+2. **Install** the APK on your Android phone
+   - You may need to enable "Install from unknown sources"
+3. **Open** the app to establish a session
+4. **Add widget** to your home screen:
+   - Long-press your home screen
+   - Tap "Widgets"
+   - Find "OASTH Live" and drag it
+5. **Configure** with your stop code (e.g., `1029`)
+6. **Tap widget** anytime to refresh!
 
-Clone the Repository and Navigate:
+### Finding Your Stop Code
 
-git clone [https://github.com/YOUR_USERNAME/kde-oasth-live-tracker.git](https://github.com/YOUR_USERNAME/kde-oasth-live-tracker.git)
-cd kde-oasth-live-tracker
+1. Visit [telematics.oasth.gr](https://telematics.oasth.gr/en/)
+2. Search for your bus stop
+3. The stop code is shown on the stop marker
 
-Create and Activate Virtual Environment (Sandbox):
-This creates an isolated environment (venv) where all dependencies are installed.
+### Supported Languages
 
-```bash
-python3 -m venv venv
-source venv/bin/activate
+- 🇬🇧 English
+- 🇬🇷 Greek (Ελληνικά)
+
+The app follows your phone's language setting.
+
+---
+
+## 🔧 For Developers
+
+### How It Works
+
+This app reverse-engineers the OASTH telematics API:
+
+1. **Session**: A hidden WebView visits the OASTH site to get a `PHPSESSID` cookie and CSRF token
+2. **API Calls**: Native HTTP requests with the session credentials fetch real-time arrivals
+3. **Widget**: `AppWidgetProvider` with `Executor` pattern for background work
+
+### API Endpoints
+
+```
+GET https://telematics.oasth.gr/api/?act=getStopArrivals&p1={stopCode}
+
+Headers:
+  Cookie: PHPSESSID={sessionId}
+  X-CSRF-Token: {token}
+  X-Requested-With: XMLHttpRequest
 ```
 
-Install Python Dependencies:
-(This installs Playwright and necessary libraries.)
+### Project Structure
 
-```bash
-pip install -r requirements.txt
+```
+android/
+├── app/src/main/java/com/oasth/widget/
+│   ├── data/
+│   │   ├── Models.kt          # Data classes
+│   │   ├── SessionManager.kt  # WebView session handling
+│   │   ├── OasthApi.kt        # HTTP API client
+│   │   └── WidgetConfigRepository.kt
+│   ├── widget/
+│   │   ├── BusWidgetProvider.kt  # Home screen widget
+│   │   └── WidgetConfigActivity.kt
+│   └── ui/
+│       └── MainActivity.kt
+├── res/
+│   ├── values/strings.xml     # English strings
+│   ├── values-el/strings.xml  # Greek strings
+│   └── layout/
+└── build.gradle.kts
 ```
 
-Install the Browser Engine (Critical Step):
-Playwright requires its own separate, clean browser engine. We install the stable Firefox engine to avoid conflicts with Ubuntu's Chromium Snap.
+### Building
 
 ```bash
+cd android
+./gradlew assembleDebug
+# APK at: app/build/outputs/apk/debug/app-debug.apk
+```
+
+### Key Learnings
+
+- **RemoteViews limitations**: Only supports specific layouts (`LinearLayout`, `RelativeLayout`, etc.) and widgets (`TextView`, `ImageView`, `Button`). NO plain `<View>` elements!
+- **Widget async**: Use `Executor` + `Handler` pattern, NOT coroutines in `AppWidgetProvider`
+- **Samsung quirks**: Test on Samsung devices - they have stricter widget requirements
+
+---
+
+## 📋 Python CLI (Bonus)
+
+A Python CLI is also included for desktop/terminal use:
+
+```bash
+# Install dependencies
+pip install requests playwright
 playwright install firefox
+
+# Get arrivals for a stop
+python cli.py --stop 1029
+
+# List all bus lines
+python cli.py --lines
 ```
 
-Once the setup is complete, configure your KDE widget to run the script.
+---
 
-Add Widget: Right-click the desktop → Add Widgets → Search for and add "Command Output".
+## 🤝 Contributing
 
-Crucial Setup: You must configure your widget's font for the alignment to work correctly.
+Pull requests welcome! Feel free to:
+- Report bugs
+- Suggest features
+- Add translations
 
-Right-click the Widget → Configure → Go to Appearance/Font Settings.
+---
 
-Select a Monospaced Font (e.g., Hack, Noto Mono, Ubuntu Mono).
+## 📜 License
 
-Configure Command: In the widget settings, paste the following command. You must replace /path/to/project/ with the absolute path to your cloned folder (e.g., /home/username/kde-oasth-live-tracker/).
+MIT License — see [LICENSE](LICENSE)
 
-```bash
-/path/to/project/venv/bin/python3 /path/to/project/bus_timer.py
-```
+---
 
-Final Polish:
-
-Set Run Every to 60 seconds or higher.
-
-The output will display using ANSI color codes (Red for urgent, Green for safe) in a clean, terminal-like list format.
-
- - Fetches real-time bus data
- - Displays data on KDE Plasma desktop
- - Low resource usage
- - Self-healing mechanism for reliability
-
-I actually welcome contributions to enhance this since I am not very energetic enhancing this. Please follow these steps:
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Submit a pull request with a description of your changes.
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+<p align="center">
+  Made with ♥ by a fellow duo enthusiast
+</p>
