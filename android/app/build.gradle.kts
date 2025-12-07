@@ -51,4 +51,7 @@ dependencies {
     
     // WebView for session management
     implementation("androidx.webkit:webkit:1.9.0")
+    
+    // Unit testing
+    testImplementation("junit:junit:4.13.2")
 }
