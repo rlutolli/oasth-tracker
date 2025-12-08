@@ -14,7 +14,7 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-14  # Use latest macOS with Apple Silicon
+    runs-on: macos-14  # Apple Silicon for faster builds
     
     steps:
     - name: Checkout
@@ -40,17 +40,33 @@ jobs:
         # Generate the native iOS project structure
         flutter create --platforms=ios .
         
-    - name: Copy Widget Extension files
-      working-directory: ios_app/ios
-      run: |
-        echo "Widget extension files are in BusWidget/"
-        ls -la BusWidget/ || echo "BusWidget folder not found"
+        # Show what was created
+        ls -la ios/
         
-    - name: Update Bundle Identifier (optional)
-      working-directory: ios_app/ios
+    - name: Install xcodeproj gem
       run: |
-        # Update bundle ID in project.pbxproj if needed
-        sed -i '' 's/com.example.oasthLive/com.oasth.live/g' Runner.xcodeproj/project.pbxproj || true
+        gem install xcodeproj
+        
+    - name: Copy widget Swift files to generated project
+      working-directory: ios_app
+      run: |
+        # Ensure BusWidget folder exists in ios/
+        mkdir -p ios/BusWidget
+        
+        # Copy our Swift widget files
+        if [ -f "ios/BusWidget/BusWidget.swift" ]; then
+          echo "Widget Swift files already in place"
+        else
+          echo "Widget Swift files should be in ios/BusWidget/"
+        fi
+        
+        ls -la ios/BusWidget/ || echo "BusWidget folder empty or missing"
+        
+    - name: Setup widget extension (automated)
+      working-directory: ios_app
+      run: |
+        # Run our automated Xcode project configuration
+        ruby scripts/setup_widget_extension.rb
         
     - name: Build iOS (unsigned)
       working-directory: ios_app
@@ -65,6 +81,14 @@ jobs:
         
         # Copy the .app bundle
         cp -r build/ios/iphoneos/Runner.app Payload/
+        
+        # Check if widget extension was built
+        if [ -d "build/ios/iphoneos/BusWidget.appex" ]; then
+          echo "✓ Widget extension was built"
+          cp -r build/ios/iphoneos/BusWidget.appex Payload/Runner.app/PlugIns/
+        else
+          echo "⚠ Widget extension not found in build output"
+        fi
         
         # Create the IPA (which is just a ZIP file)
         zip -r OASTH-Live.ipa Payload
@@ -106,6 +130,12 @@ jobs:
           - [AltStore/AltServer](https://altstore.io/)
           - [Sideloadly](https://sideloadly.io/)
           - [AltLinux](https://github.com/NyaMisty/AltLinux) (for Linux)
+          
+          **Features:**
+          - 📱 Two widget variants: Standard & Compact
+          - 🎨 LED-style display matching Android
+          - 🔴🟢 Urgency colors (Compact widget)
+          - 🔍 Line filtering
           
           **Note:** Free Apple ID requires re-signing every 7 days.
       env:
