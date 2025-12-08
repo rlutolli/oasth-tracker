@@ -111,6 +111,24 @@ class BusWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
         Log.d(TAG, "onReceive: ${intent.action}")
         
+        if (intent.action == ACTION_TOGGLE_VISIBILITY || intent.action == ACTION_REFRESH) {
+            // Haptic Feedback
+            val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as android.os.VibratorManager
+                vibratorManager.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+            }
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                vibrator.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(50) // Fallback for older devices
+            }
+        }
+        
         if (intent.action == ACTION_TOGGLE_VISIBILITY) {
             val widgetId = intent.getIntExtra(
                 AppWidgetManager.EXTRA_APPWIDGET_ID,
