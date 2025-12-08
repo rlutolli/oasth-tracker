@@ -3,6 +3,8 @@
     <string name="app_name">ΟΑΣΘ Live</string>
     <string name="widget_name">Αφίξεις Λεωφορείων</string>
     <string name="widget_description">Εμφανίζει αφίξεις σε πραγματικό χρόνο</string>
+    <string name="widget_minimal_name">Αφίξεις (Συμπαγές)</string>
+    <string name="widget_minimal_description">Συμπαγής προβολή με χρώματα επείγοντος</string>
     
     <!-- Widget -->
     <string name="tap_to_configure">Πατήστε για ρύθμιση</string>
@@ -22,6 +24,8 @@
     <string name="save">Αποθήκευση</string>
     <string name="enter_stop_code">Εισάγετε κωδικό στάσης</string>
     <string name="fetching_stop_name">Αναζήτηση ονόματος…</string>
+    <string name="line_filter_label">Φίλτρο Γραμμών (προαιρετικό)</string>
+    <string name="line_filter_hint">π.χ. 01, 31, 52 (κενό = όλες)</string>
     
     <!-- Main Activity -->
     <string name="app_description">Αφίξεις λεωφορείων Θεσσαλονίκης σε πραγματικό χρόνο</string>

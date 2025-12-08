@@ -37,7 +37,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Widget Provider -->
+        <!-- Standard Widget Provider -->
         <receiver
             android:name=".widget.BusWidgetProvider"
             android:exported="true"
@@ -50,9 +50,28 @@
                 android:resource="@xml/widget_info" />
         </receiver>
 
-        <!-- Widget RemoteViews Service for ListView -->
+        <!-- Standard Widget RemoteViews Service for ListView -->
         <service
             android:name=".widget.BusRemoteViewsService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <!-- Minimal Widget Provider (compact version with urgency colors) -->
+        <receiver
+            android:name=".widget.MinimalWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_minimal_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_minimal_info" />
+        </receiver>
+
+        <!-- Minimal Widget RemoteViews Service -->
+        <service
+            android:name=".widget.MinimalRemoteViewsService"
             android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 

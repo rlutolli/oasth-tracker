@@ -66,5 +66,18 @@ data class SessionData(
 data class WidgetConfig(
     val widgetId: Int,
     val stopCode: String,
-    val stopName: String
-)
+    val stopName: String,
+    val lineFilter: String = ""  // Comma-separated line IDs to show (empty = show all)
+) {
+    /**
+     * Parse line filter into a set of allowed lines.
+     * Returns null if no filter (show all lines).
+     */
+    fun getAllowedLines(): Set<String>? {
+        if (lineFilter.isBlank()) return null
+        return lineFilter.split(",")
+            .map { it.trim().uppercase() }
+            .filter { it.isNotEmpty() }
+            .toSet()
+    }
+}

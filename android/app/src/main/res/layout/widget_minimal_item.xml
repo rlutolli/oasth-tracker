@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minimal widget item - just line number and colored time -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="4dp"
+    android:paddingHorizontal="4dp"
+    android:gravity="center_vertical"
+    android:background="@drawable/led_pattern">
+
+    <!-- Line number (Bitmap) -->
+    <ImageView
+        android:id="@+id/img_line"
+        android:layout_width="36dp"
+        android:layout_height="28dp"
+        android:scaleType="fitCenter" />
+
+    <!-- Spacer -->
+    <TextView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1" />
+
+    <!-- Arrival time with urgency color (Bitmap) -->
+    <ImageView
+        android:id="@+id/img_time"
+        android:layout_width="wrap_content"
+        android:layout_height="28dp"
+        android:minWidth="48dp"
+        android:scaleType="fitCenter" />
+
+</LinearLayout>

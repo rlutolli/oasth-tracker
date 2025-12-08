@@ -51,7 +51,27 @@
         android:padding="16dp"
         android:textSize="16sp"
         android:background="@drawable/input_background"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/line_filter_label"
+        android:textSize="14sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/line_filter_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/line_filter_hint"
+        android:inputType="text"
+        android:padding="16dp"
+        android:textSize="16sp"
+        android:background="@drawable/input_background"
         android:layout_marginBottom="32dp" />
+
 
     <Button
         android:id="@+id/save_button"

@@ -30,6 +30,7 @@ class WidgetConfigActivity : AppCompatActivity() {
     
     private lateinit var stopCodeInput: EditText
     private lateinit var stopNameInput: EditText
+    private lateinit var lineFilterInput: EditText
     private lateinit var saveButton: Button
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,12 +53,14 @@ class WidgetConfigActivity : AppCompatActivity() {
         
         stopCodeInput = findViewById(R.id.stop_code_input)
         stopNameInput = findViewById(R.id.stop_name_input)
+        lineFilterInput = findViewById(R.id.line_filter_input)
         saveButton = findViewById(R.id.save_button)
         
         val existingConfig = configRepo.getConfig(widgetId)
         if (existingConfig != null) {
             stopCodeInput.setText(existingConfig.stopCode)
             stopNameInput.setText(existingConfig.stopName)
+            lineFilterInput.setText(existingConfig.lineFilter)
         }
         
         saveButton.setOnClickListener {
@@ -68,6 +71,7 @@ class WidgetConfigActivity : AppCompatActivity() {
     private fun saveConfiguration() {
         val stopCode = stopCodeInput.text.toString().trim()
         var stopName = stopNameInput.text.toString().trim()
+        val lineFilter = lineFilterInput.text.toString().trim()
         
         if (stopCode.isEmpty()) {
             Toast.makeText(this, R.string.enter_stop_code, Toast.LENGTH_SHORT).show()
@@ -91,7 +95,8 @@ class WidgetConfigActivity : AppCompatActivity() {
                 val config = WidgetConfig(
                     widgetId = widgetId,
                     stopCode = stopCode,
-                    stopName = finalStopName
+                    stopName = finalStopName,
+                    lineFilter = lineFilter
                 )
                 configRepo.saveConfig(config)
                 

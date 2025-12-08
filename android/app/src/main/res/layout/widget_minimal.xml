@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minimal widget layout - compact, just line numbers and times -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="6dp">
+
+    <!-- Header: Stop code only (compact) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="2dp">
+
+        <TextView
+            android:id="@+id/widget_stop_code"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="1052"
+            android:textColor="#FF9500"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace" />
+
+        <!-- Refresh button -->
+        <ImageView
+            android:id="@+id/widget_refresh"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_refresh_pixel"
+            android:contentDescription="Refresh" />
+    </LinearLayout>
+
+    <!-- Separator line -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#4DFFAA00" />
+
+    <!-- Compact arrivals list -->
+    <ListView
+        android:id="@+id/widget_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#000000"
+        android:divider="@null"
+        android:dividerHeight="0dp"
+        android:padding="2dp" />
+
+    <!-- Empty state -->
+    <TextView
+        android:id="@+id/widget_empty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="@string/loading"
+        android:textColor="#FFAA00"
+        android:textSize="12sp"
+        android:fontFamily="monospace"
+        android:visibility="gone" />
+
+</LinearLayout>

@@ -5,7 +5,6 @@ import android.content.Intent
 import android.appwidget.AppWidgetManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Paint
 import android.graphics.Typeface
 import android.util.Log
 import android.widget.RemoteViews
@@ -17,36 +16,41 @@ import androidx.core.content.res.ResourcesCompat
 import com.oasth.widget.R
 import com.oasth.widget.data.BusArrival
 import com.oasth.widget.data.OasthApi
-import com.oasth.widget.data.LineRepository
 import com.oasth.widget.data.SessionManager
 import com.oasth.widget.data.StopRepository
 import com.oasth.widget.data.WidgetConfigRepository
 import kotlinx.coroutines.runBlocking
 
 /**
- * Service that provides RemoteViews for the widget ListView
+ * Service for the Minimal widget's ListView
  */
-class BusRemoteViewsService : RemoteViewsService() {
+class MinimalRemoteViewsService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
         Log.d(TAG, "onGetViewFactory called")
-        return BusRemoteViewsFactory(applicationContext, intent)
+        return MinimalRemoteViewsFactory(applicationContext, intent)
     }
     
     companion object {
-        private const val TAG = "BusRemoteViewsService"
+        private const val TAG = "MinimalRemoteViewsSvc"
     }
 }
 
 /**
- * Factory that creates RemoteViews for each bus arrival in the list
+ * Factory for the minimal widget - compact with urgency colors
+ * Implements Panos's color-coding idea: red < 5min (urgent), green >= 5min (safe)
  */
-class BusRemoteViewsFactory(
+class MinimalRemoteViewsFactory(
     private val context: Context,
     intent: Intent
 ) : RemoteViewsService.RemoteViewsFactory {
     
     companion object {
-        private const val TAG = "BusRemoteViewsFactory"
+        private const val TAG = "MinimalViewsFactory"
+        
+        // Urgency colors from Panos's code
+        private const val COLOR_URGENT = 0xFFFF5555.toInt()  // Neon Red (< 5 min)
+        private const val COLOR_SAFE = 0xFF55FF55.toInt()    // Neon Green (>= 5 min)
+        private const val COLOR_AMBER = 0xFFFFAA00.toInt()   // Amber (line number)
     }
     
     private val appWidgetId = intent.getIntExtra(
@@ -59,14 +63,12 @@ class BusRemoteViewsFactory(
     private val api = OasthApi(sessionManager)
     private val configRepo = WidgetConfigRepository(context)
     private val stopRepo = StopRepository(context)
-    private val lineRepo = LineRepository(context)
     
     private var customTypeface: Typeface? = null
     
     override fun onCreate() {
         Log.d(TAG, "onCreate for widget $appWidgetId")
         try {
-            // Load VT323 font from res/font using ResourcesCompat
             customTypeface = ResourcesCompat.getFont(context, R.font.vt323_regular)
         } catch (e: Exception) {
             Log.e(TAG, "Could not load font: ${e.message}")
@@ -76,9 +78,7 @@ class BusRemoteViewsFactory(
     private fun textAsBitmap(
         text: CharSequence, 
         sizeSp: Float, 
-        color: Int, 
-        maxWidthDp: Int? = null,
-        alignment: android.text.Layout.Alignment = android.text.Layout.Alignment.ALIGN_CENTER
+        color: Int
     ): Bitmap {
         val paint = android.text.TextPaint()
         paint.isAntiAlias = false
@@ -87,41 +87,30 @@ class BusRemoteViewsFactory(
         paint.color = color
         paint.typeface = customTypeface ?: Typeface.MONOSPACE
 
-        // Determine available width
-        val widthPx = if (maxWidthDp != null) {
-             (maxWidthDp * context.resources.displayMetrics.density).toInt()
-        } else {
-             // If no max width, measure text. 
-             // Note: paint.measureText(String) works, but for CharSequence we need to be careful?
-             // StaticLayout handles CharSequence.
-             // We'll estimate width if not provided.
-             android.text.Layout.getDesiredWidth(text, paint).toInt() + 20
-        }
-
-        val spacingMult = 1f
-        val spacingAdd = 0f
-        val includePad = false
-
+        val widthPx = android.text.Layout.getDesiredWidth(text, paint).toInt() + 16
+        
         val builder = android.text.StaticLayout.Builder.obtain(text, 0, text.length, paint, widthPx)
-            .setAlignment(alignment)
-            .setLineSpacing(spacingAdd, spacingMult)
-            .setIncludePad(includePad)
-            .setMaxLines(2)
-            .setEllipsize(android.text.TextUtils.TruncateAt.END)
+            .setAlignment(android.text.Layout.Alignment.ALIGN_CENTER)
+            .setLineSpacing(0f, 1f)
+            .setIncludePad(false)
+            .setMaxLines(1)
         
         val layout = builder.build()
-
-        // Calculate dimensions
         val height = layout.height.coerceAtLeast(1)
-        val width = layout.width.coerceAtLeast(1)
 
         val bitmap = Bitmap.createBitmap(widthPx, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        
-        // Draw
         layout.draw(canvas)
 
         return bitmap
+    }
+    
+    /**
+     * Get color based on urgency - idea from Panos's KDE widget
+     * Red if < 5 minutes (need to hurry!), Green if >= 5 minutes (safe)
+     */
+    private fun getUrgencyColor(minutes: Int): Int {
+        return if (minutes < 5) COLOR_URGENT else COLOR_SAFE
     }
     
     override fun onDataSetChanged() {
@@ -135,7 +124,6 @@ class BusRemoteViewsFactory(
             return
         }
         
-        // Convert Street ID to API ID using StopRepository
         val apiId = stopRepo.getApiId(config.stopCode)
         Log.d(TAG, "Fetching arrivals for stop: ${config.stopCode} -> API ID: $apiId")
         
@@ -181,41 +169,24 @@ class BusRemoteViewsFactory(
         
         val arrival = arrivals[position]
         
-        return RemoteViews(context.packageName, R.layout.widget_item).apply {
-            val color = 0xFFFFAA00.toInt()
+        return RemoteViews(context.packageName, R.layout.widget_minimal_item).apply {
+            // Line number in amber
+            setImageViewBitmap(
+                R.id.img_line, 
+                textAsBitmap(arrival.displayLine, 20f, COLOR_AMBER)
+            )
             
-            // Line number: Center
-            setImageViewBitmap(R.id.img_line, textAsBitmap(arrival.displayLine, 24f, color, 44, android.text.Layout.Alignment.ALIGN_CENTER))
-            
-            // Destination: Left Aligned (ALIGN_NORMAL)
-            var destination = arrival.lineDescr
-            if (destination.isEmpty()) {
-                destination = lineRepo.getLineDescription(arrival.displayLine) ?: ""
-            }
-            // Use 180dp max width, ALIGN_NORMAL so text starts at left
-            setImageViewBitmap(R.id.img_destination, textAsBitmap(destination, 20f, color, 180, android.text.Layout.Alignment.ALIGN_NORMAL))
-            
-            // Sigma merged with Time
-            // setImageViewBitmap(R.id.img_sigma, textAsBitmap("Σ", 22f, color))
-            
-            // Time: Center (fitCenter handles centering the bitmap, but let's center text inside too)
-            // Enlarge the apostrophe
+            // Time with urgency color (Panos's idea!)
+            val timeColor = getUrgencyColor(arrival.estimatedMinutes)
             val minText = when {
                 arrival.estimatedMinutes <= 0 -> "NOW"
-                else -> "Σ ${arrival.estimatedMinutes}'"
+                else -> "${arrival.estimatedMinutes}'"
             }
             
-            val spannableTime = SpannableString(minText)
-            if (minText.endsWith("'")) {
-                spannableTime.setSpan(
-                    RelativeSizeSpan(1.2f),
-                    minText.length - 1,
-                    minText.length,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
-            
-            setImageViewBitmap(R.id.img_time, textAsBitmap(spannableTime, 24f, color, null, android.text.Layout.Alignment.ALIGN_CENTER))
+            setImageViewBitmap(
+                R.id.img_time, 
+                textAsBitmap(minText, 20f, timeColor)
+            )
         }
     }
     
