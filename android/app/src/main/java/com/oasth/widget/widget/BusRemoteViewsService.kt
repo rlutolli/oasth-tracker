@@ -102,8 +102,10 @@ class BusRemoteViewsFactory(
                     val apiId = stopRepo.getApiId(streetId)
                     val stopName = stopRepo.getStopName(streetId) ?: "Stop $streetId"
                     
-                    // Fetch Arrivals
-                    val arrivals = api.getArrivals(apiId)
+                    // Fetch Arrivals and deduplicate by Vehicle Code
+                    val arrivals = api.getArrivals(apiId).distinctBy { 
+                        if (it.vehicleCode.isNotBlank()) it.vehicleCode else it.hashCode() 
+                    }
                     Log.d(TAG, "Fetched ${arrivals.size} arrivals for $streetId (API: $apiId)")
                     
                     // Filter
@@ -168,6 +170,7 @@ class BusRemoteViewsFactory(
             is WidgetItem.Header -> {
                 RemoteViews(context.packageName, R.layout.widget_header).apply {
                     setTextViewText(R.id.header_text, item.stopName)
+                    setOnClickFillInIntent(R.id.header_root, Intent())
                 }
             }
             is WidgetItem.Row -> {
@@ -182,6 +185,8 @@ class BusRemoteViewsFactory(
                     
                     setTextViewText(R.id.item_destination, item.times) // Showing times in destination field
                     setViewVisibility(R.id.item_time, View.GONE)       // Hide original time field
+                    
+                    setOnClickFillInIntent(R.id.item_root, Intent())
                 }
             }
         }

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/item_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
@@ -10,7 +11,7 @@
     <!-- Line Number Box -->
     <TextView
         android:id="@+id/item_line"
-        android:layout_width="40dp"
+        android:layout_width="30dp"
         android:layout_height="wrap_content"
         android:text="01N"
         android:textColor="#FFD700"
@@ -23,8 +24,8 @@
         android:layout_width="1dp"
         android:layout_height="16dp"
         android:src="@android:color/white"
-        android:tint="#33FFFFFF"
-        android:layout_marginHorizontal="12dp"/>
+        android:tint="#0a561cff"
+        android:layout_marginHorizontal="4dp"/>
 
     <!-- Times -->
     <TextView

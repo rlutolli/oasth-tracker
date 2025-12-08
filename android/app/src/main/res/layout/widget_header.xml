@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/header_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingTop="8dp"
-    android:paddingBottom="4dp">
+    android:paddingTop="2dp"
+    android:paddingBottom="2dp">
 
     <!-- Header Box -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#FF2C2C2C"
-        android:paddingVertical="6dp"
-        android:paddingHorizontal="12dp"
+        android:background="#20000000"
+        android:paddingVertical="2dp"
+        android:paddingHorizontal="4dp"
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
@@ -21,7 +22,7 @@
             android:layout_height="16dp"
             android:src="@android:color/white"
             android:tint="#FFD700"
-            android:layout_marginEnd="8dp"/>
+            android:layout_marginEnd="4dp"/>
 
         <TextView
             android:id="@+id/header_text"
