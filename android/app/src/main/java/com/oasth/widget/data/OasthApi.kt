@@ -59,9 +59,9 @@ class OasthApi(private val sessionManager: SessionManager) {
             val code = response.code
             val body = response.body?.string() ?: "[]"
             response.close()
-            
+
             Log.d(TAG, "Response code: $code, body length: ${body.length}")
-            
+
             // Check for 401 or unauthorized response
             if (code == 401 || body.contains("unauthorized", ignoreCase = true) || body.contains("not authorized", ignoreCase = true)) {
                 if (!isRetrying) {
@@ -76,6 +76,7 @@ class OasthApi(private val sessionManager: SessionManager) {
                     isRetrying = false
                     return@withContext emptyList()
                 }
+                return@withContext emptyList()
             }
             
             try {
@@ -94,28 +95,29 @@ class OasthApi(private val sessionManager: SessionManager) {
     }
     
     /**
-     * Get stop info by code - returns stop name if available
+     * Get stop info by code
      */
     suspend fun getStopInfo(stopCode: String): String? = withContext(Dispatchers.IO) {
         try {
             val session = sessionManager.getSession()
             
             val request = Request.Builder()
-                .url("${API_URL}?act=getStopArrivals&p1=$stopCode")
+                .url("${API_URL}?act=getStopNameAndXY&p1=$stopCode")
                 .post("".toRequestBody("application/x-www-form-urlencoded".toMediaType()))
                 .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36")
                 .addHeader("Accept", "application/json")
                 .addHeader("X-Requested-With", "XMLHttpRequest")
                 .addHeader("X-CSRF-Token", session.token)
                 .addHeader("Cookie", "PHPSESSID=${session.phpSessionId}")
+                .addHeader("Origin", BASE_URL)
+                .addHeader("Referer", "$BASE_URL/")
                 .build()
             
             val response = client.newCall(request).execute()
             val body = response.body?.string() ?: return@withContext null
             response.close()
-            
-            // Try to extract stop description from arrivals response
-            val regex = """"bstop_descr"\s*:\s*"([^"]+)"""".toRegex()
+
+            val regex = """"stop_descr"\s*:\s*"([^"]+)"""".toRegex(RegexOption.IGNORE_CASE)
             regex.find(body)?.groupValues?.get(1)
         } catch (e: Exception) {
             Log.e(TAG, "Error getting stop info: ${e.message}")
@@ -124,7 +126,34 @@ class OasthApi(private val sessionManager: SessionManager) {
     }
     
     /**
-     * Check for app updates from GitHub releases
+     * Get all bus lines
+     */
+    suspend fun getLines(): List<BusLine> = withContext(Dispatchers.IO) {
+        val session = sessionManager.getSession()
+
+        val request = Request.Builder()
+            .url("${API_URL}?act=webGetLines")
+            .post("".toRequestBody("application/x-www-form-urlencoded".toMediaType()))
+            .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36")
+            .addHeader("Accept", "application/json, text/javascript, */*; q=0.01")
+            .addHeader("X-Requested-With", "XMLHttpRequest")
+            .addHeader("X-CSRF-Token", session.token)
+            .addHeader("Cookie", "PHPSESSID=${session.phpSessionId}")
+            .build()
+
+        val response = client.newCall(request).execute()
+        val body = response.body?.string() ?: "[]"
+
+        try {
+            val type = object : TypeToken<List<BusLine>>() {}.type
+            gson.fromJson<List<BusLine>>(body, type) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /**
+     * Check for app updates
      */
     suspend fun checkForUpdate(currentVersion: String): String? = withContext(Dispatchers.IO) {
         try {
@@ -137,10 +166,10 @@ class OasthApi(private val sessionManager: SessionManager) {
             val response = client.newCall(request).execute()
             val body = response.body?.string() ?: return@withContext null
             response.close()
-            
+
             val regex = """"tag_name"\s*:\s*"v?([^"]+)"""".toRegex()
             val latestVersion = regex.find(body)?.groupValues?.get(1) ?: return@withContext null
-            
+
             if (isNewerVersion(latestVersion, currentVersion)) {
                 latestVersion
             } else {

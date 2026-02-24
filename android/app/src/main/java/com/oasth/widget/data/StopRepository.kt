@@ -10,7 +10,7 @@ import java.io.InputStreamReader
 /**
  * Repository for resolving Street IDs (visible on signs) to API IDs (for getStopArrivals).
  * Also provides stop names for display.
- * 
+ *
  * stops.json structure:
  * {
  *   "1403": {
@@ -25,7 +25,7 @@ class StopRepository(private val context: Context) {
 
     // Map: Street ID -> API ID
     private var apiIdMap: Map<String, String>? = null
-    
+
     // Map: Street ID -> Stop Description
     private var stopNameMap: Map<String, String>? = null
 
@@ -40,11 +40,11 @@ class StopRepository(private val context: Context) {
             Log.d(TAG, "Mapped StreetID $streetId -> API ID $apiId")
             return apiId
         }
-        
+
         Log.d(TAG, "No mapping for $streetId, assuming it's already an API ID")
         return streetId
     }
-    
+
     /**
      * Gets the stop name/description for a Street ID.
      */
@@ -53,9 +53,16 @@ class StopRepository(private val context: Context) {
         return stopNameMap?.get(streetId)
     }
 
+    /**
+     * @deprecated Use getApiId instead. Kept for backward compatibility.
+     */
+    fun getInternalId(inputCode: String): String {
+        return getApiId(inputCode)
+    }
+
     private fun ensureLoaded() {
         if (apiIdMap != null) return
-        
+
         Log.d(TAG, "Loading stops.json...")
         val apiMap = mutableMapOf<String, String>()
         val nameMap = mutableMapOf<String, String>()
@@ -78,25 +85,25 @@ class StopRepository(private val context: Context) {
                 if (apiIdsArray != null && apiIdsArray.length() > 0) {
                     apiMap[streetId] = apiIdsArray.getString(0)
                 }
-                
+
                 // Get stop description
                 val stopDescr = stopObject.optString("StopDescr", "")
                 if (stopDescr.isNotEmpty()) {
                     nameMap[streetId] = stopDescr
                 }
             }
-            
+
             apiIdMap = apiMap
             stopNameMap = nameMap
             Log.d(TAG, "Loaded ${apiMap.size} stops, ${nameMap.size} names")
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "Error loading stops.json: ${e.message}")
             apiIdMap = emptyMap()
             stopNameMap = emptyMap()
         }
     }
-    
+
     companion object {
         private const val TAG = "StopRepository"
     }

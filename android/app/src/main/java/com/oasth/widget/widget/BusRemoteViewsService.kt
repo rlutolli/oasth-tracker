@@ -1,23 +1,22 @@
 package com.oasth.widget.widget
 
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
-import android.appwidget.AppWidgetManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Paint
 import android.graphics.Typeface
-import android.util.Log
-import android.widget.RemoteViews
-import android.widget.RemoteViewsService
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
+import android.util.Log
+import android.widget.RemoteViews
+import android.widget.RemoteViewsService
 import androidx.core.content.res.ResourcesCompat
 import com.oasth.widget.R
 import com.oasth.widget.data.BusArrival
-import com.oasth.widget.data.OasthApi
 import com.oasth.widget.data.LineRepository
+import com.oasth.widget.data.OasthApi
 import com.oasth.widget.data.SessionManager
 import com.oasth.widget.data.StopRepository
 import com.oasth.widget.data.WidgetConfigRepository
@@ -31,7 +30,7 @@ class BusRemoteViewsService : RemoteViewsService() {
         Log.d(TAG, "onGetViewFactory called")
         return BusRemoteViewsFactory(applicationContext, intent)
     }
-    
+
     companion object {
         private const val TAG = "BusRemoteViewsService"
     }
@@ -60,9 +59,9 @@ class BusRemoteViewsFactory(
     private val configRepo = WidgetConfigRepository(context)
     private val stopRepo = StopRepository(context)
     private val lineRepo = LineRepository(context)
-    
+
     private var customTypeface: Typeface? = null
-    
+
     override fun onCreate() {
         Log.d(TAG, "onCreate for widget $appWidgetId")
         try {
@@ -72,11 +71,11 @@ class BusRemoteViewsFactory(
             Log.e(TAG, "Could not load font: ${e.message}")
         }
     }
-    
+
     private fun textAsBitmap(
-        text: CharSequence, 
-        sizeSp: Float, 
-        color: Int, 
+        text: CharSequence,
+        sizeSp: Float,
+        color: Int,
         maxWidthDp: Int? = null,
         alignment: android.text.Layout.Alignment = android.text.Layout.Alignment.ALIGN_CENTER
     ): Bitmap {
@@ -89,13 +88,11 @@ class BusRemoteViewsFactory(
 
         // Determine available width
         val widthPx = if (maxWidthDp != null) {
-             (maxWidthDp * context.resources.displayMetrics.density).toInt()
+            (maxWidthDp * context.resources.displayMetrics.density).toInt()
         } else {
-             // If no max width, measure text. 
-             // Note: paint.measureText(String) works, but for CharSequence we need to be careful?
-             // StaticLayout handles CharSequence.
-             // We'll estimate width if not provided.
-             android.text.Layout.getDesiredWidth(text, paint).toInt() + 20
+            // If no max width, measure text.
+            // StaticLayout handles CharSequence.
+            android.text.Layout.getDesiredWidth(text, paint).toInt() + 20
         }
 
         val spacingMult = 1f
@@ -108,16 +105,15 @@ class BusRemoteViewsFactory(
             .setIncludePad(includePad)
             .setMaxLines(2)
             .setEllipsize(android.text.TextUtils.TruncateAt.END)
-        
+
         val layout = builder.build()
 
         // Calculate dimensions
         val height = layout.height.coerceAtLeast(1)
-        val width = layout.width.coerceAtLeast(1)
 
         val bitmap = Bitmap.createBitmap(widthPx, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        
+
         // Draw
         layout.draw(canvas)
 
@@ -126,6 +122,7 @@ class BusRemoteViewsFactory(
     
     override fun onDataSetChanged() {
         Log.d(TAG, "=== onDataSetChanged START ===")
+        Log.d(TAG, "Widget ID: $appWidgetId")
         
         arrivals.clear()
         
@@ -134,24 +131,26 @@ class BusRemoteViewsFactory(
             Log.w(TAG, "No config found for widget $appWidgetId")
             return
         }
-        
         // Convert Street ID to API ID using StopRepository
         val apiId = stopRepo.getApiId(config.stopCode)
         Log.d(TAG, "Fetching arrivals for stop: ${config.stopCode} -> API ID: $apiId")
-        
+
         // Get allowed lines filter (null = show all)
         val allowedLines = config.getAllowedLines()
         if (allowedLines != null) {
             Log.d(TAG, "Line filter active: $allowedLines")
         }
-        
+
         try {
             val result = runBlocking {
                 api.getArrivals(apiId)
             }
-            
+
             Log.d(TAG, "Got ${result.size} arrivals from API")
-            
+            result.forEach { arr ->
+                Log.d(TAG, "   → Line ${arr.displayLine}: ${arr.estimatedMinutes} min")
+            }
+
             // Apply line filter if set
             val filtered = if (allowedLines != null) {
                 result.filter { arrival ->
@@ -160,14 +159,14 @@ class BusRemoteViewsFactory(
             } else {
                 result
             }
-            
+
             Log.d(TAG, "After filtering: ${filtered.size} arrivals")
-            
+
             // Deduplicate: same vehicle shouldn't appear twice
-            val unique = filtered.distinctBy { 
-                if (it.vehicleCode.isNotBlank()) it.vehicleCode else it.hashCode() 
+            val unique = filtered.distinctBy {
+                if (it.vehicleCode.isNotBlank()) it.vehicleCode else it.hashCode()
             }
-            
+
             arrivals.addAll(unique.sortedBy { it.estimatedMinutes })
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching arrivals: ${e.message}", e)
@@ -177,40 +176,50 @@ class BusRemoteViewsFactory(
     }
     
     override fun onDestroy() {
+        Log.d(TAG, "onDestroy")
         arrivals.clear()
     }
-    
-    override fun getCount(): Int = arrivals.size
-    
+
+    override fun getCount(): Int {
+        Log.d(TAG, "getCount: ${arrivals.size}")
+        return arrivals.size
+    }
+
     override fun getViewAt(position: Int): RemoteViews? {
-        if (position >= arrivals.size) return null
+        Log.d(TAG, "getViewAt($position)")
+
+        if (position >= arrivals.size) {
+            return null
+        }
         
         val arrival = arrivals[position]
         
         return RemoteViews(context.packageName, R.layout.widget_item).apply {
             val color = 0xFFFFAA00.toInt()
-            
+
             // Line number: Center
-            setImageViewBitmap(R.id.img_line, textAsBitmap(arrival.displayLine, 24f, color, 44, android.text.Layout.Alignment.ALIGN_CENTER))
-            
+            setImageViewBitmap(
+                R.id.img_line,
+                textAsBitmap(arrival.displayLine, 24f, color, 44, android.text.Layout.Alignment.ALIGN_CENTER)
+            )
+
             // Destination: Left Aligned (ALIGN_NORMAL)
             var destination = arrival.lineDescr
             if (destination.isEmpty()) {
                 destination = lineRepo.getLineDescription(arrival.displayLine) ?: ""
             }
             // Use 180dp max width, ALIGN_NORMAL so text starts at left
-            setImageViewBitmap(R.id.img_destination, textAsBitmap(destination, 20f, color, 180, android.text.Layout.Alignment.ALIGN_NORMAL))
-            
-            // Sigma merged with Time
-            // setImageViewBitmap(R.id.img_sigma, textAsBitmap("Σ", 22f, color))
-            
-            // Time: Center (fitCenter handles centering the bitmap, but let's center text inside too)
-            // Enlarge the apostrophe
+            setImageViewBitmap(
+                R.id.img_destination,
+                textAsBitmap(destination, 20f, color, 180, android.text.Layout.Alignment.ALIGN_NORMAL)
+            )
+
+            // Time: Center
             val minText = when {
                 arrival.estimatedMinutes <= 0 -> "NOW"
                 else -> "Σ ${arrival.estimatedMinutes}'"
             }
-            
+
             val spannableTime = SpannableString(minText)
             if (minText.endsWith("'")) {
                 spannableTime.setSpan(
@@ -220,8 +229,11 @@ class BusRemoteViewsFactory(
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             }
-            
-            setImageViewBitmap(R.id.img_time, textAsBitmap(spannableTime, 24f, color, null, android.text.Layout.Alignment.ALIGN_CENTER))
+
+            setImageViewBitmap(
+                R.id.img_time,
+                textAsBitmap(spannableTime, 24f, color, null, android.text.Layout.Alignment.ALIGN_CENTER)
+            )
         }
     }
     

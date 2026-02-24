@@ -49,7 +49,6 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_info" />
         </receiver>
-
         <!-- Standard Widget RemoteViews Service for ListView -->
         <service
             android:name=".widget.BusRemoteViewsService"
@@ -75,6 +74,15 @@
             android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 
+        <activity
+            android:name=".DebugActivity"
+            android:exported="true"
+            android:label="OASTH Debug">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>

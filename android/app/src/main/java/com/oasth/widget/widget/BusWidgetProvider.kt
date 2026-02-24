@@ -1,15 +1,14 @@
 package com.oasth.widget.widget
 
-import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.widget.RemoteViews
 import com.oasth.widget.R
-import com.oasth.widget.data.StopRepository
 import com.oasth.widget.data.WidgetConfigRepository
 
 /**
@@ -29,7 +28,6 @@ class BusWidgetProvider : AppWidgetProvider() {
             Log.d(TAG, "updateAppWidget: $appWidgetId")
             
             val configRepo = WidgetConfigRepository(context)
-            val stopRepo = StopRepository(context)
             val config = configRepo.getConfig(appWidgetId)
             
             if (config == null) {
@@ -55,8 +53,8 @@ class BusWidgetProvider : AppWidgetProvider() {
             }
             
             Log.d(TAG, "Config: stopCode=${config.stopCode}, name=${config.stopName}")
-            
-// Stop name logic: Only show if explicitly set by user
+
+            // Stop name logic: Only show if explicitly set by user
             val stopName = config.stopName
             
             // Set up RemoteViews with adapter for ListView
@@ -95,24 +93,23 @@ class BusWidgetProvider : AppWidgetProvider() {
             Log.d(TAG, "notifyAppWidgetViewDataChanged called")
         }
     }
-    
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
         Log.d(TAG, "onUpdate called for widgets: ${appWidgetIds.toList()}")
-        
         for (appWidgetId in appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId)
         }
     }
-    
+
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        
+
         Log.d(TAG, "onReceive: ${intent.action}")
-        
+
         if (intent.action == ACTION_REFRESH) {
             val widgetId = intent.getIntExtra(
                 AppWidgetManager.EXTRA_APPWIDGET_ID,

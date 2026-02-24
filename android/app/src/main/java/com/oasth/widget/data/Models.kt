@@ -22,11 +22,11 @@ data class BusArrival(
     // btime2 comes as String from API, need custom handling
     @SerializedName("btime2")
     val rawTime: String = "0"
-) {
+ ) {
     /** Estimated minutes as Int, parsed from rawTime string */
     val estimatedMinutes: Int
         get() = rawTime.toIntOrNull() ?: 0
-    
+
     /** Display name - prefer lineId if available, otherwise routeCode */
     val displayLine: String
         get() = lineId.ifEmpty { routeCode }
