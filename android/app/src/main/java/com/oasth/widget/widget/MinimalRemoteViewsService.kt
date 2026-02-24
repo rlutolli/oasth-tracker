@@ -124,12 +124,18 @@ class MinimalRemoteViewsFactory(
             return
         }
         
-        val apiId = stopRepo.getApiId(config.stopCode)
-        Log.d(TAG, "Fetching arrivals for stop: ${config.stopCode} -> API ID: $apiId")
-        
-        // Get allowed lines filter (null = show all)
-        val allowedLines = config.getAllowedLines()
-        if (allowedLines != null) {
+        val stopItems = configRepo.getSmartConfig(appWidgetId)
+        if (stopItems.isEmpty()) {
+            Log.w(TAG, "No smart config found for widget $appWidgetId")
+            return
+        }
+
+        val primary = stopItems.first()
+        val apiId = stopRepo.getApiId(primary.streetId)
+        Log.d(TAG, "Fetching arrivals for stop: ${primary.streetId} -> API ID: $apiId")
+
+        val allowedLines = primary.selectedLines.toSet()
+        if (allowedLines.isNotEmpty()) {
             Log.d(TAG, "Line filter active: $allowedLines")
         }
         
@@ -141,9 +147,9 @@ class MinimalRemoteViewsFactory(
             Log.d(TAG, "Got ${result.size} arrivals from API")
             
             // Apply line filter if set
-            val filtered = if (allowedLines != null) {
+            val filtered = if (allowedLines.isNotEmpty()) {
                 result.filter { arrival ->
-                    allowedLines.contains(arrival.displayLine.uppercase())
+                    allowedLines.contains(arrival.displayLine)
                 }
             } else {
                 result

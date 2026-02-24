@@ -234,52 +234,6 @@ class WidgetConfigActivity : AppCompatActivity() {
             Toast.makeText(this, "Please add at least one stop", Toast.LENGTH_SHORT).show()
             return
         }
-
-        saveButton.isEnabled = false
-        saveButton.text = getString(R.string.save)
-
-        CoroutineScope(Dispatchers.IO).launch {
-            // 1. Serialize to JSON
-            val gson = Gson()
-            val configJson = gson.toJson(selectedItems)
-
-            // 2. Legacy Fallback Fields (First stop only, for compatibility)
-            val legacyCode = selectedItems.joinToString(",") { it.streetId }
-            val legacyName = selectedItems.joinToString(",") { it.stopName }
-
-            val config = WidgetConfig(
-                widgetId = widgetId,
-                stopCode = legacyCode,
-                stopName = legacyName,
-                lineFilters = "",
-                configJson = configJson
-            )
-
-            configRepo.saveConfig(config)
-
-            // 3. Update Widget
-            val intent = Intent(this@WidgetConfigActivity, BusWidgetProvider::class.java).apply {
-                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(widgetId))
-            }
-            sendBroadcast(intent)
-
-            // 4. Finish
-            CoroutineScope(Dispatchers.Main).launch {
-                val resultIntent = Intent().apply {
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                }
-                setResult(RESULT_OK, resultIntent)
-                finish()
-            }
-        }
-    }
-
-    private fun saveConfiguration() {
-        if (selectedItems.isEmpty()) {
-            Toast.makeText(this, "Please add at least one stop", Toast.LENGTH_SHORT).show()
-            return
-        }
         
         saveButton.isEnabled = false
         saveButton.text = getString(R.string.save)
