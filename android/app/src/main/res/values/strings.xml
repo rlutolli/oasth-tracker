@@ -24,8 +24,11 @@
     <string name="save">Save</string>
     <string name="enter_stop_code">Please enter a stop code</string>
     <string name="fetching_stop_name">Fetching stop name…</string>
-    <string name="line_filter_label">Line Filter (optional)</string>
-    <string name="line_filter_hint">e.g. 01, 31, 52 (empty = show all)</string>
+    <string name="line_filter_label">Line Filter (Whitelist)</string>
+    <string name="line_filter_hint">e.g. 1403:01N,05; 1024:10</string>
+    <string name="stop_code_hint_multi">e.g. 1403, 1024</string>
+    <string name="enter_stop_name">Stop Name</string>
+    <string name="enter_stop_name_hint">My Stop Name</string>
     
     <!-- Main Activity -->
     <string name="app_description">Real-time bus arrivals for Thessaloniki</string>

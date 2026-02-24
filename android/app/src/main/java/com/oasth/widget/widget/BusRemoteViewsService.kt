@@ -6,10 +6,8 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Typeface
-import android.text.SpannableString
-import android.text.Spanned
-import android.text.style.RelativeSizeSpan
 import android.util.Log
+import android.view.View
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import androidx.core.content.res.ResourcesCompat
@@ -27,13 +25,20 @@ import kotlinx.coroutines.runBlocking
  */
 class BusRemoteViewsService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
-        Log.d(TAG, "onGetViewFactory called")
         return BusRemoteViewsFactory(applicationContext, intent)
     }
 
     companion object {
         private const val TAG = "BusRemoteViewsService"
     }
+}
+
+/**
+ * Sealed class to represent different row types in the widget list
+ */
+sealed class WidgetItem {
+    data class Header(val stopName: String) : WidgetItem()
+    data class Row(val lineId: String, val times: String) : WidgetItem()
 }
 
 /**
@@ -53,7 +58,9 @@ class BusRemoteViewsFactory(
         AppWidgetManager.INVALID_APPWIDGET_ID
     )
     
-    private val arrivals = mutableListOf<BusArrival>()
+    // Using simple list of WidgetItem (Header or Row)
+    private val items = mutableListOf<WidgetItem>()
+    
     private val sessionManager = SessionManager(context)
     private val api = OasthApi(sessionManager)
     private val configRepo = WidgetConfigRepository(context)
@@ -124,122 +131,127 @@ class BusRemoteViewsFactory(
         Log.d(TAG, "=== onDataSetChanged START ===")
         Log.d(TAG, "Widget ID: $appWidgetId")
         
-        arrivals.clear()
+        items.clear()
         
-        val config = configRepo.getConfig(appWidgetId)
-        if (config == null) {
-            Log.w(TAG, "No config found for widget $appWidgetId")
-            return
-        }
-        // Convert Street ID to API ID using StopRepository
-        val apiId = stopRepo.getApiId(config.stopCode)
-        Log.d(TAG, "Fetching arrivals for stop: ${config.stopCode} -> API ID: $apiId")
+        val config = configRepo.getConfig(appWidgetId) ?: return
 
-        // Get allowed lines filter (null = show all)
-        val allowedLines = config.getAllowedLines()
-        if (allowedLines != null) {
-            Log.d(TAG, "Line filter active: $allowedLines")
-        }
+        // 1. Get Smart Config
+        val stopItems = configRepo.getSmartConfig(appWidgetId)
 
-        try {
-            val result = runBlocking {
-                api.getArrivals(apiId)
-            }
+        // 2. Loop through config items
+        runBlocking {
+            for (item in stopItems) {
+                val streetId = item.streetId
 
-            Log.d(TAG, "Got ${result.size} arrivals from API")
-            result.forEach { arr ->
-                Log.d(TAG, "   → Line ${arr.displayLine}: ${arr.estimatedMinutes} min")
-            }
-
-            // Apply line filter if set
-            val filtered = if (allowedLines != null) {
-                result.filter { arrival ->
-                    allowedLines.contains(arrival.displayLine.uppercase())
+                // Check Network Availability
+                if (!com.oasth.widget.utils.NetworkUtils.isNetworkAvailable(context)) {
+                    Log.e(TAG, "No network connection for $streetId")
+                    items.add(WidgetItem.Header(item.stopName))
+                    items.add(WidgetItem.Row("", "No Internet"))
+                    continue
                 }
-            } else {
-                result
+
+                try {
+                    Log.d(TAG, "Processing StreetID: '$streetId'")
+
+                    val apiId = stopRepo.getApiId(streetId)
+
+                    // Fetch Arrivals with Timeout
+                    val result = kotlinx.coroutines.withTimeout(15000L) {
+                        api.getArrivals(apiId)
+                    }
+
+                    // Deduplicate
+                    val unique = result.distinctBy {
+                        if (it.vehicleCode.isNotBlank()) it.vehicleCode else it.hashCode()
+                    }
+
+                    // Filter: Use item.selectedLines
+                    val allowedLines = item.selectedLines.toSet()
+                    val validArrivals = unique.filter {
+                        allowedLines.isEmpty() || allowedLines.contains(it.displayLine)
+                    }
+
+                    if (validArrivals.isNotEmpty()) {
+                        // Header
+                        items.add(WidgetItem.Header("${item.stopName} ($streetId)"))
+
+                        // Group by Line
+                        val grouped = validArrivals.groupBy { it.displayLine }
+
+                        // Sort Line Groups by their NEAREST arrival time
+                        val sortedLines = grouped.keys.sortedBy { line ->
+                            grouped[line]?.minOfOrNull { it.estimatedMinutes } ?: Int.MAX_VALUE
+                        }
+
+                        for (line in sortedLines) {
+                            val lineArrivals = grouped[line] ?: emptyList()
+                            val sortedArrivals = lineArrivals.sortedBy { it.estimatedMinutes }
+
+                            val timeString = sortedArrivals.joinToString(", ") { "${it.estimatedMinutes}'" }
+                            items.add(WidgetItem.Row(line, timeString))
+                        }
+                    } else {
+                        items.add(WidgetItem.Header("${item.stopName} ($streetId)"))
+                        items.add(WidgetItem.Row("", "No buses"))
+                    }
+
+                } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                    Log.e(TAG, "Timeout fetching $streetId")
+                    items.add(WidgetItem.Header(item.stopName))
+                    items.add(WidgetItem.Row("Err", "Timeout"))
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error fetching for $streetId: ${e.message}")
+                    items.add(WidgetItem.Header(item.stopName))
+                    items.add(WidgetItem.Row("Err", "Load failed"))
+                }
             }
-
-            Log.d(TAG, "After filtering: ${filtered.size} arrivals")
-
-            // Deduplicate: same vehicle shouldn't appear twice
-            val unique = filtered.distinctBy {
-                if (it.vehicleCode.isNotBlank()) it.vehicleCode else it.hashCode()
-            }
-
-            arrivals.addAll(unique.sortedBy { it.estimatedMinutes })
-        } catch (e: Exception) {
-            Log.e(TAG, "Error fetching arrivals: ${e.message}", e)
         }
+
         
-        Log.d(TAG, "=== onDataSetChanged END (${arrivals.size} items) ===")
+        Log.d(TAG, "=== onDataSetChanged END (${items.size} items) ===")
     }
     
     override fun onDestroy() {
-        Log.d(TAG, "onDestroy")
-        arrivals.clear()
+        items.clear()
     }
-
+    
     override fun getCount(): Int {
-        Log.d(TAG, "getCount: ${arrivals.size}")
-        return arrivals.size
+        return items.size
     }
-
+    
     override fun getViewAt(position: Int): RemoteViews? {
-        Log.d(TAG, "getViewAt($position)")
-
-        if (position >= arrivals.size) {
-            return null
-        }
+        if (position >= items.size) return null
         
-        val arrival = arrivals[position]
-        
-        return RemoteViews(context.packageName, R.layout.widget_item).apply {
-            val color = 0xFFFFAA00.toInt()
-
-            // Line number: Center
-            setImageViewBitmap(
-                R.id.img_line,
-                textAsBitmap(arrival.displayLine, 24f, color, 44, android.text.Layout.Alignment.ALIGN_CENTER)
-            )
-
-            // Destination: Left Aligned (ALIGN_NORMAL)
-            var destination = arrival.lineDescr
-            if (destination.isEmpty()) {
-                destination = lineRepo.getLineDescription(arrival.displayLine) ?: ""
+        return when (val item = items[position]) {
+            is WidgetItem.Header -> {
+                RemoteViews(context.packageName, R.layout.widget_header).apply {
+                    setTextViewText(R.id.header_text, item.stopName)
+                    setOnClickFillInIntent(R.id.header_root, Intent())
+                }
             }
-            // Use 180dp max width, ALIGN_NORMAL so text starts at left
-            setImageViewBitmap(
-                R.id.img_destination,
-                textAsBitmap(destination, 20f, color, 180, android.text.Layout.Alignment.ALIGN_NORMAL)
-            )
-
-            // Time: Center
-            val minText = when {
-                arrival.estimatedMinutes <= 0 -> "NOW"
-                else -> "Σ ${arrival.estimatedMinutes}'"
+            is WidgetItem.Row -> {
+                RemoteViews(context.packageName, R.layout.widget_item).apply {
+                    if (item.lineId.isEmpty()) {
+                        // "No buses" row, hide line number
+                        setViewVisibility(R.id.item_line, View.GONE)
+                    } else {
+                        setViewVisibility(R.id.item_line, View.VISIBLE)
+                        setTextViewText(R.id.item_line, item.lineId)
+                    }
+                    
+                    setTextViewText(R.id.item_destination, item.times) // Showing times in destination field
+                    setViewVisibility(R.id.item_time, View.GONE)       // Hide original time field
+                    
+                    setOnClickFillInIntent(R.id.item_root, Intent())
+                }
             }
-
-            val spannableTime = SpannableString(minText)
-            if (minText.endsWith("'")) {
-                spannableTime.setSpan(
-                    RelativeSizeSpan(1.2f),
-                    minText.length - 1,
-                    minText.length,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
-
-            setImageViewBitmap(
-                R.id.img_time,
-                textAsBitmap(spannableTime, 24f, color, null, android.text.Layout.Alignment.ALIGN_CENTER)
-            )
         }
     }
     
     override fun getLoadingView(): RemoteViews? = null
     
-    override fun getViewTypeCount(): Int = 1
+    override fun getViewTypeCount(): Int = 2
     
     override fun getItemId(position: Int): Long = position.toLong()
     

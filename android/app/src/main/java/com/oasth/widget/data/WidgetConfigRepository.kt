@@ -39,6 +39,44 @@ class WidgetConfigRepository(context: Context) {
             null
         }
     }
+
+    /**
+     * Get Smart Configuration (List of Stops)
+     * Handles migration from legacy comma-separated string.
+     */
+    fun getSmartConfig(widgetId: Int): List<StopConfigItem> {
+        val config = getConfig(widgetId) ?: return emptyList()
+        
+        // 1. Try new JSON format
+        if (config.configJson.isNotEmpty()) {
+            return try {
+                val type = object : com.google.gson.reflect.TypeToken<List<StopConfigItem>>() {}.type
+                gson.fromJson(config.configJson, type)
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+        
+        // 2. Fallback / Migration from Legacy
+        if (config.stopCode.isNotEmpty()) {
+            val codes = config.stopCode.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val names = config.stopName.split(",").map { it.trim() }
+            
+            // Reconstruct list
+            return codes.mapIndexed { index, code ->
+                val name = names.getOrElse(index) { "Stop $code" }
+                // Legacy filters applied to ALL stops (rough approximation)
+                val lines = if (config.lineFilters.isNotEmpty()) {
+                    config.lineFilters.split(",").map { it.trim() }
+                } else {
+                    emptyList()
+                }
+                StopConfigItem(code, name, lines)
+            }
+        }
+        
+        return emptyList()
+    }
     
     /**
      * Delete configuration for a widget

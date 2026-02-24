@@ -16,7 +16,8 @@ import java.io.InputStreamReader
  *   "1403": {
  *     "StreetID": "1403",
  *     "StopDescr": "ΤΖΑΒΕΛΛΑ",
- *     "API_IDs": ["1306"]
+ *     "API_IDs": ["1306"],
+ *     "Lines": ["01N", "05"]
  *   },
  *   ...
  * }
@@ -28,6 +29,9 @@ class StopRepository(private val context: Context) {
 
     // Map: Street ID -> Stop Description
     private var stopNameMap: Map<String, String>? = null
+    
+    // Map: Street ID -> List of Lines
+    private var stopLinesMap: Map<String, List<String>>? = null
 
     /**
      * Resolves a Street ID to an API ID for getStopArrivals.
@@ -54,10 +58,21 @@ class StopRepository(private val context: Context) {
     }
 
     /**
-     * @deprecated Use getApiId instead. Kept for backward compatibility.
+     * Gets all lines associated with a stop (from static DB).
      */
-    fun getInternalId(inputCode: String): String {
-        return getApiId(inputCode)
+    fun getLinesForStop(streetId: String): List<String> {
+        ensureLoaded()
+        return stopLinesMap?.get(streetId) ?: emptyList()
+    }
+
+    /**
+     * Returns a list of all stops for the search UI.
+     */
+    fun getAllStops(): List<StopEntry> {
+        ensureLoaded()
+        return stopNameMap?.map { (streetId, name) ->
+            StopEntry(streetId, name)
+        }?.sortedBy { it.name } ?: emptyList()
     }
 
     private fun ensureLoaded() {
@@ -66,6 +81,7 @@ class StopRepository(private val context: Context) {
         Log.d(TAG, "Loading stops.json...")
         val apiMap = mutableMapOf<String, String>()
         val nameMap = mutableMapOf<String, String>()
+        val linesMap = mutableMapOf<String, List<String>>()
         
         try {
             val assetManager = context.assets
@@ -91,16 +107,27 @@ class StopRepository(private val context: Context) {
                 if (stopDescr.isNotEmpty()) {
                     nameMap[streetId] = stopDescr
                 }
+                
+                // Get available lines
+                val linesArray: JSONArray? = stopObject.optJSONArray("Lines")
+                if (linesArray != null) {
+                    val linesList = mutableListOf<String>()
+                    for (i in 0 until linesArray.length()) {
+                        linesList.add(linesArray.getString(i))
+                    }
+                    linesMap[streetId] = linesList
+                }
             }
 
             apiIdMap = apiMap
             stopNameMap = nameMap
-            Log.d(TAG, "Loaded ${apiMap.size} stops, ${nameMap.size} names")
-
+            stopLinesMap = linesMap
+            Log.d(TAG, "Loaded ${apiMap.size} stops, ${linesMap.size} with lines")
         } catch (e: Exception) {
             Log.e(TAG, "Error loading stops.json: ${e.message}")
             apiIdMap = emptyMap()
             stopNameMap = emptyMap()
+            stopLinesMap = emptyMap()
         }
     }
 
@@ -108,3 +135,5 @@ class StopRepository(private val context: Context) {
         private const val TAG = "StopRepository"
     }
 }
+
+data class StopEntry(val streetId: String, val name: String)

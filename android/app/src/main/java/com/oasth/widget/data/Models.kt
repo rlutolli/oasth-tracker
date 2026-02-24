@@ -67,17 +67,12 @@ data class WidgetConfig(
     val widgetId: Int,
     val stopCode: String,
     val stopName: String,
-    val lineFilter: String = ""  // Comma-separated line IDs to show (empty = show all)
-) {
-    /**
-     * Parse line filter into a set of allowed lines.
-     * Returns null if no filter (show all lines).
-     */
-    fun getAllowedLines(): Set<String>? {
-        if (lineFilter.isBlank()) return null
-        return lineFilter.split(",")
-            .map { it.trim().uppercase() }
-            .filter { it.isNotEmpty() }
-            .toSet()
-    }
-}
+    val lineFilters: String = "", // Legacy
+    val configJson: String = "" // New: JSON List of StopConfigItem
+)
+
+data class StopConfigItem(
+    val streetId: String,
+    val stopName: String,
+    val selectedLines: List<String> = emptyList() // Empty = All lines
+)

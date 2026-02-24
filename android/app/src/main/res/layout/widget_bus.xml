@@ -1,102 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/widget_container"
+    android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@drawable/widget_background"
+    android:background="@drawable/widget_background_transparent"
     android:padding="8dp">
 
-    <!-- Header row: LINE DESTINATION with refresh icon -->
-    <LinearLayout
+    <!-- Loading / Empty View -->
+    <FrameLayout
+        android:id="@+id/empty_view"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingBottom="4dp">
-
+        android:layout_height="match_parent"
+        android:visibility="gone">
         <TextView
-            android:layout_width="0dp"
+            android:id="@+id/widget_empty"
+            android:text="Loading..."
+            android:textColor="#ffffffff"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/header_line_dest"
-            android:textColor="#FF9500"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:fontFamily="monospace" />
+            android:layout_gravity="center"/>
+    </FrameLayout>
 
-        <!-- Refresh button -->
-        <ImageView
-            android:id="@+id/widget_refresh"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_refresh_pixel"
-            android:contentDescription="Refresh" />
-    </LinearLayout>
-
-    <!-- Separator line (using TextView because View is not allowed in RemoteViews) -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#4DFFAA00" />
-
-    <!-- Bus arrivals list -->
+    <!-- Bus List -->
     <ListView
         android:id="@+id/widget_list"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="#000000"
         android:divider="@null"
         android:dividerHeight="0dp"
-        android:padding="8dp" />
+        android:cacheColorHint="@android:color/transparent"
+        android:listSelector="@android:color/transparent" />
 
-    <!-- Empty state -->
+    <!-- Last Updated Timestamp -->
     <TextView
-        android:id="@+id/widget_empty"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:text="@string/loading"
-        android:textColor="#FFAA00"
-        android:textSize="16sp"
-        android:fontFamily="monospace"
-        android:visibility="gone" />
-
-    <!-- Footer: Stop Code & Name -->
-    <LinearLayout
-        android:layout_width="match_parent"
+        android:id="@+id/widget_last_updated"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:paddingTop="8dp">
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="4dp"
+        android:text="Updated --:--"
+        android:textColor="#CCFFFFFF"
+        android:textSize="10sp"
+        android:textStyle="italic" />
 
-        <!-- Stop Code (in box) -->
-        <TextView
-            android:id="@+id/widget_stop_code"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="1052"
-            android:textColor="#FF9500"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:fontFamily="monospace"
-            android:background="@drawable/stop_code_box"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="4dp" />
-
-        <!-- Stop Name -->
-        <TextView
-            android:id="@+id/widget_stop_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="KAMARA"
-            android:textColor="#FFAA00"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:fontFamily="monospace"
-            android:layout_marginStart="12dp" />
-
-    </LinearLayout>
 </LinearLayout>
